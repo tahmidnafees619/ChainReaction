@@ -828,8 +828,8 @@ let menuState = {
   rows: 9,
   cols: 6,
   players: [
-    { id:0, color:PLAYER_COLORS[0], name:PLAYER_NAMES[0] },
-    { id:1, color:PLAYER_COLORS[1], name:PLAYER_NAMES[1] },
+    { id:0, color:PLAYER_COLORS[0], name:PLAYER_NAMES[0], isBot:false },
+    { id:1, color:PLAYER_COLORS[1], name:PLAYER_NAMES[1], isBot:true },
   ]
 };
 
@@ -943,7 +943,7 @@ function initMenu() {
   addBtn.addEventListener('click', () => {
     if (menuState.players.length >= 10) return;
     const id = menuState.players.length;
-    menuState.players.push({ id, color:PLAYER_COLORS[id], name:PLAYER_NAMES[id] });
+    menuState.players.push({ id, color:PLAYER_COLORS[id], name:PLAYER_NAMES[id], isBot:false });
     renderTokens();
   });
 
@@ -966,14 +966,30 @@ function renderTokens() {
     tok.className = 'player-token';
     tok.style.cssText = `background:${hexToRgba(p.color,.18)};
       color:${p.color};
-      box-shadow: 0 0 12px ${hexToRgba(p.color,.35)};`;
+      box-shadow: 0 0 12px ${hexToRgba(p.color,.35)};
+      cursor:pointer;
+      position:relative;`;
     tok.style.setProperty('current-color', p.color);
+    
+    const typeLabel = p.isBot ? '🤖 BOT' : '👤 HUMAN';
     tok.innerHTML = `
-      <span style="font-size:11px;font-weight:700;">${p.name.substring(0,3).toUpperCase()}</span>
+      <span style="font-size:10px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px;">
+        <span>${p.name.substring(0,3).toUpperCase()}</span>
+        <span style="font-size:8px;opacity:0.8;">${typeLabel}</span>
+      </span>
       <span class="token-x">✕</span>`;
-    tok.title = `${p.name} — click to remove`;
+    tok.title = `${p.name} (${typeLabel}) — click to toggle type, X to remove`;
 
-    tok.addEventListener('click', () => {
+    // Click to toggle bot/human
+    tok.addEventListener('click', (e) => {
+      if (e.target.closest('.token-x')) return; // Don't toggle if clicking X
+      p.isBot = !p.isBot;
+      renderTokens();
+    });
+
+    // X button to remove
+    tok.querySelector('.token-x').addEventListener('click', (e) => {
+      e.stopPropagation();
       if (menuState.players.length <= 2) {
         showToast('Minimum 2 operatives required', 'warn');
         return;
@@ -1140,11 +1156,10 @@ function bindGameEvents() {
   game.on('turn_change', async ({ currentPlayer }) => {
     setActivePlayer(currentPlayer);
 
-    // ═══ AI LOGIC ═══
-    // Let's declare Player 2 (Index 1) as our AI Bot for testing!
-    const AI_PLAYER_ID = 1;
-
-    if (currentPlayer === AI_PLAYER_ID && !game._gameOver) {
+    // ═══ AI LOGIC — Handle Multiple Bot Players ═══
+    // Check if the current player is a bot
+    const currentPlayerConfig = menuState.players[currentPlayer];
+    if (currentPlayerConfig && currentPlayerConfig.isBot && !game._gameOver) {
       // Block human inputs on the canvas while AI thinks
       $gameCanvas.style.pointerEvents = 'none';
       
@@ -1152,7 +1167,7 @@ function bindGameEvents() {
       await new Promise(resolve => setTimeout(resolve, 600));
 
       // Get the optimal coordinates from our heuristic script
-      const botMove = ChainReactionAI.getBestMove(game, AI_PLAYER_ID);
+      const botMove = ChainReactionAI.getBestMove(game, currentPlayer);
       
       if (botMove) {
         // Execute the automated click into the core engine
