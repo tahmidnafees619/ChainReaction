@@ -793,6 +793,7 @@ html,body{
 
 <!-- ═══════ ENGINE SCRIPT ═══════ -->
 <script src="ChainReactionEngine.js"></script>
+<script src="ChainReactionAI.js"></script>
 
 <script>
 'use strict';
@@ -1131,9 +1132,35 @@ function setActivePlayer(playerId) {
    GAME EVENT BINDINGS
    ────────────────────────────────────────── */
 function bindGameEvents() {
-  game.on('state_change', snapshot => {
+  game.on('state_change', async snapshot => {
     lastSnapshot = snapshot;
     updatePlayerStrip(snapshot);
+
+    // ═══ AI LOGIC ═══
+    // If the game is over, do nothing
+    if (snapshot.gameOver) return;
+
+    // Let's declare Player 2 (Index 1) as our AI Bot for testing!
+    const AI_PLAYER_ID = 1; 
+
+    if (snapshot.currentPlayer === AI_PLAYER_ID) {
+      // Block human inputs on the canvas while AI thinks
+      $gameCanvas.style.pointerEvents = 'none';
+      
+      // Add a slight 600ms artificial delay so the bot feels natural, not instant
+      await new Promise(resolve => setTimeout(resolve, 600));
+
+      // Get the optimal coordinates from our heuristic script
+      const botMove = ChainReactionAI.getBestMove(game, AI_PLAYER_ID);
+      
+      if (botMove) {
+        // Execute the automated click into Claude's core engine
+        await game.handlePlayerClick(botMove.row, botMove.col);
+      }
+
+      // Restore human touchscreen inputs once AI turn finishes
+      $gameCanvas.style.pointerEvents = 'auto';
+    }
   });
 
   game.on('turn_change', ({ currentPlayer }) => {
