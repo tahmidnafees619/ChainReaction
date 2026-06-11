@@ -1132,18 +1132,19 @@ function setActivePlayer(playerId) {
    GAME EVENT BINDINGS
    ────────────────────────────────────────── */
 function bindGameEvents() {
-  game.on('state_change', async snapshot => {
+  game.on('state_change', snapshot => {
     lastSnapshot = snapshot;
     updatePlayerStrip(snapshot);
+  });
+
+  game.on('turn_change', async ({ currentPlayer }) => {
+    setActivePlayer(currentPlayer);
 
     // ═══ AI LOGIC ═══
-    // If the game is over, do nothing
-    if (snapshot.gameOver) return;
-
     // Let's declare Player 2 (Index 1) as our AI Bot for testing!
-    const AI_PLAYER_ID = 1; 
+    const AI_PLAYER_ID = 1;
 
-    if (snapshot.currentPlayer === AI_PLAYER_ID) {
+    if (currentPlayer === AI_PLAYER_ID && !game._gameOver) {
       // Block human inputs on the canvas while AI thinks
       $gameCanvas.style.pointerEvents = 'none';
       
@@ -1154,17 +1155,13 @@ function bindGameEvents() {
       const botMove = ChainReactionAI.getBestMove(game, AI_PLAYER_ID);
       
       if (botMove) {
-        // Execute the automated click into Claude's core engine
-        await game.handlePlayerClick(botMove.row, botMove.col);
+        // Execute the automated click into the core engine
+        game.handlePlayerClick(botMove.row, botMove.col);
       }
 
       // Restore human touchscreen inputs once AI turn finishes
       $gameCanvas.style.pointerEvents = 'auto';
     }
-  });
-
-  game.on('turn_change', ({ currentPlayer }) => {
-    setActivePlayer(currentPlayer);
   });
 
   game.on('explosion', ({ row, col, player }) => {
