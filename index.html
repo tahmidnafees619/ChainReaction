@@ -922,11 +922,61 @@ const SoundFX = {
         osc.stop(this.ctx.currentTime + 0.5);
       }, note.delay * 1000);
     });
+  },
+
+  playMenuSelect() {
+    this.init();
+    if (!this.ctx) return;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine'; // Clean, soft menu tone
+    osc.frequency.setValueAtTime(800, this.ctx.currentTime); // Higher pitch for selection
+    osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.08); // Slight pitch dip
+
+    gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.08);
+  },
+
+  playMenuRemove() {
+    this.init();
+    if (!this.ctx) return;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, this.ctx.currentTime); // Lower tone for removal
+    osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.12);
+
+    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.12);
   }
 };
 
 // Ensure audio context is unlocked on first user gesture (mobile/browser autoplay policies)
-document.addEventListener('pointerdown', () => SoundFX.init(), { once: true, passive: true });
+// Also start menu music on first interaction with the menu
+document.addEventListener('pointerdown', () => {
+  SoundFX.init();
+  // Start menu music if we're on the menu screen and it hasn't started yet
+  if (!menuMusicStarted && !$menuScreen.classList.contains('hidden')) {
+    menuMusicStarted = true;
+    try { SoundFX.startMenuMusic(); } catch (e) { /* ignore */ }
+  }
+}, { once: true, passive: true });
 /* ════════════════════════════════════════════════════════════════
    CHAIN REACTION — CYBERPUNK FRONTEND
    ════════════════════════════════════════════════════════════════ */
@@ -965,6 +1015,7 @@ let menuState = {
 
 let game = null;
 let lastSnapshot = null;
+let menuMusicStarted = false; // Track if menu music has started
 
 /* ──────────────────────────────────────────
    PARTICLE / FX STATE
@@ -1064,16 +1115,19 @@ function initMenu() {
   rowsSlider.addEventListener('input', () => {
     menuState.rows = +rowsSlider.value;
     rowsVal.textContent = menuState.rows;
+    try { SoundFX.playMenuSelect(); } catch (e) { /* ignore */ }
   });
   colsSlider.addEventListener('input', () => {
     menuState.cols = +colsSlider.value;
     colsVal.textContent = menuState.cols;
+    try { SoundFX.playMenuSelect(); } catch (e) { /* ignore */ }
   });
 
   addBtn.addEventListener('click', () => {
     if (menuState.players.length >= 10) return;
     const id = menuState.players.length;
     menuState.players.push({ id, color:PLAYER_COLORS[id], name:PLAYER_NAMES[id], isBot:false });
+    try { SoundFX.playMenuSelect(); } catch (e) { /* ignore */ }
     renderTokens();
   });
 
@@ -1084,9 +1138,6 @@ function initMenu() {
   });
 
   renderTokens();
-
-  // Start menu music on first interaction
-  try { SoundFX.startMenuMusic(); } catch (e) { /* ignore audio errors */ }
 }
 
 function renderTokens() {
@@ -1120,6 +1171,7 @@ function renderTokens() {
     // Click to toggle bot/human
     tok.addEventListener('click', (e) => {
       if (e.target.closest('.token-x')) return; // Don't toggle if clicking X
+      try { SoundFX.playMenuSelect(); } catch (e2) { /* ignore */ }
       p.isBot = !p.isBot;
       renderTokens();
     });
@@ -1131,6 +1183,7 @@ function renderTokens() {
         showToast('Minimum 2 operatives required', 'warn');
         return;
       }
+      try { SoundFX.playMenuRemove(); } catch (e2) { /* ignore */ }
       menuState.players.splice(idx, 1);
       // Re-assign ids
       menuState.players.forEach((pp, i) => {
