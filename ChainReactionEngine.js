@@ -36,6 +36,16 @@
  *
  *  "error"          – Invalid move attempted.
  *                     Payload: { message }
+ *
+ *  "cascade_capped" – Emitted if a single chain reaction exceeds
+ *                     `maxCascadeWaves` waves without settling. The
+ *                     engine stops simulating further waves for this
+ *                     move; any still-critical cells are picked back
+ *                     up automatically the next time processing runs
+ *                     (i.e. on the next move). This is a safety valve
+ *                     against pathological/oscillating cascades, not
+ *                     something normal play should ever trigger.
+ *                     Payload: { waves }
  * ============================================================
  */
 
@@ -51,6 +61,17 @@ const EXPLOSION_DELAY_MS = 200;
 
 /** Sentinel value for a cell that belongs to no player. */
 const EMPTY = -1;
+
+/**
+ * Hard ceiling on how many explosion waves a single cascade may run
+ * before the engine gives up and lets the rest resolve on a later move.
+ * Chain Reaction is a chip-firing/sandpile system — pathological or
+ * highly symmetric boards can in theory oscillate for a very long time
+ * before settling. This cap guarantees `_processExplosions()` always
+ * terminates. It is generous enough that ordinary play never gets
+ * remotely close to it.
+ */
+const DEFAULT_MAX_CASCADE_WAVES = 1000;
 
 
 // ─────────────────────────────────────────────
@@ -117,9 +138,12 @@ class ChainReactionGame {
    * @param {number} config.rows         – Grid row count  (≥ 2)
    * @param {number} config.cols         – Grid column count (≥ 2)
    * @param {number} config.totalPlayers – Number of players (2–10)
+   * @param {number} [config.maxCascadeWaves] – Safety cap on explosion
+   *        waves per cascade (see `DEFAULT_MAX_CASCADE_WAVES`). Mainly
+   *        exposed for testing; leave unset in production use.
    */
-  constructor({ rows, cols, totalPlayers }) {
-    this._validateConfig(rows, cols, totalPlayers);
+  constructor({ rows, cols, totalPlayers, maxCascadeWaves }) {
+    this._validateConfig(rows, cols, totalPlayers, maxCascadeWaves);
 
     /** @type {number} */
     this.rows = rows;
@@ -127,6 +151,8 @@ class ChainReactionGame {
     this.cols = cols;
     /** @type {number} */
     this.totalPlayers = totalPlayers;
+    /** @type {number} */
+    this.maxCascadeWaves = maxCascadeWaves ?? DEFAULT_MAX_CASCADE_WAVES;
 
     // ── Event listener registry ──────────────────
     // Maps eventName → Set of callback functions.
@@ -362,11 +388,12 @@ class ChainReactionGame {
    * @param {Object} config – Same shape as the constructor config.
    */
   newGame(config) {
-    const { rows, cols, totalPlayers } = config;
-    this._validateConfig(rows, cols, totalPlayers);
-    this.rows         = rows;
-    this.cols         = cols;
-    this.totalPlayers = totalPlayers;
+    const { rows, cols, totalPlayers, maxCascadeWaves } = config;
+    this._validateConfig(rows, cols, totalPlayers, maxCascadeWaves);
+    this.rows             = rows;
+    this.cols             = cols;
+    this.totalPlayers     = totalPlayers;
+    this.maxCascadeWaves  = maxCascadeWaves ?? DEFAULT_MAX_CASCADE_WAVES;
     this._resetState();
     this._emitStateChange();
   }
@@ -429,8 +456,21 @@ class ChainReactionGame {
    * @returns {Promise<void>}
    */
   async _processExplosions() {
+    let waveCount = 0;
+
     // Keep looping as long as there is at least one explosive cell
     while (true) {
+      // ── 0. Safety valve — bail out of pathological/oscillating cascades ──
+      //       See `DEFAULT_MAX_CASCADE_WAVES` for rationale. Any cells still
+      //       critical at this point are simply picked back up the next
+      //       time processing runs (stateless rescan), so this is a pause,
+      //       not data loss.
+      if (waveCount >= this.maxCascadeWaves) {
+        this._emit('cascade_capped', { waves: waveCount });
+        break;
+      }
+      waveCount++;
+
       // ── 1. Collect all cells that need to explode this wave ──
       const wave = [];
       for (let r = 0; r < this.rows; r++) {
@@ -680,8 +720,9 @@ class ChainReactionGame {
    * @param {number} rows
    * @param {number} cols
    * @param {number} totalPlayers
+   * @param {number} [maxCascadeWaves] – Optional; validated only if provided.
    */
-  _validateConfig(rows, cols, totalPlayers) {
+  _validateConfig(rows, cols, totalPlayers, maxCascadeWaves) {
     if (!Number.isInteger(rows) || rows < 2) {
       throw new RangeError(`rows must be an integer ≥ 2, got: ${rows}`);
     }
@@ -691,12 +732,36 @@ class ChainReactionGame {
     if (!Number.isInteger(totalPlayers) || totalPlayers < 2 || totalPlayers > 10) {
       throw new RangeError(`totalPlayers must be an integer between 2 and 10, got: ${totalPlayers}`);
     }
+    if (maxCascadeWaves !== undefined && (!Number.isInteger(maxCascadeWaves) || maxCascadeWaves < 1)) {
+      throw new RangeError(`maxCascadeWaves must be a positive integer, got: ${maxCascadeWaves}`);
+    }
   }
 
 
   // ──────────────────────────────────────────
   //  READ-ONLY QUERY API (for the frontend)
   // ──────────────────────────────────────────
+
+  /**
+   * True while a cascade is actively resolving. Frontends should check
+   * this (not the underscore-prefixed internal field) before allowing
+   * new input — it mirrors the same flag surfaced on every `state_change`
+   * snapshot (`isProcessing`), just available synchronously without
+   * waiting for the next event.
+   * @returns {boolean}
+   */
+  get isProcessing() {
+    return this._isProcessing;
+  }
+
+  /**
+   * True once a winner has been declared. See `isProcessing` for why
+   * this is exposed publicly instead of reading `_gameOver` directly.
+   * @returns {boolean}
+   */
+  get isGameOver() {
+    return this._gameOver;
+  }
 
   /**
    * Returns a fully serialisable snapshot of the current game state.

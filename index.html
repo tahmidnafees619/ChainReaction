@@ -259,62 +259,104 @@ html,body{
   letter-spacing:1px;
 }
 
-.token-row{
-  display:flex;flex-wrap:wrap;gap:10px;align-items:center;
-  min-height:56px;
+.operatives-list{
+  display:flex;flex-direction:column;gap:8px;
 }
 
-.player-token{
-  position:relative;
-  width:44px;height:44px;
-  border-radius:50%;
+/* ── Operative row card ───────────────────── */
+.op-row{
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:10px;
+  padding:10px 10px 11px;
+  display:flex;flex-direction:column;gap:9px;
+  transition:border-color .2s,background .2s;
+}
+.op-row:has(.seg-btn[data-role="bot"].active){
+  border-color:var(--pcolor,var(--cyan-dim));
+  background:color-mix(in srgb, var(--pcolor, var(--cyan)) 6%, rgba(255,255,255,.03));
+}
+.op-row-top{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.op-id{
+  display:flex;align-items:center;gap:9px;
+  min-width:0;
+}
+.op-dot{
+  width:11px;height:11px;border-radius:50%;flex-shrink:0;
+  background:var(--pcolor,#00dcff);
+  box-shadow:0 0 8px var(--pcolor,#00dcff);
+}
+.op-name{
+  font-family:var(--font-display);
+  font-size:13px;font-weight:700;letter-spacing:1px;
+  color:#e8edfb;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* Remove — always visible, always tappable (no hover-only, no pointer-events:none) */
+.op-remove{
+  flex-shrink:0;
+  width:30px;height:30px;border-radius:50%;
+  background:rgba(255,26,60,.12);
+  border:1px solid rgba(255,26,60,.4);
+  color:#ff8a97;font-size:13px;
   cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--font-display);font-size:12px;font-weight:700;
-  transition:transform .2s cubic-bezier(.2,.8,.3,1),
-             box-shadow .2s ease;
-  user-select:none;
+  transition:background .2s,border-color .2s,transform .15s;
 }
-.player-token::before{
-  content:'';
-  position:absolute;inset:-3px;
-  border-radius:50%;
-  border:1.5px solid currentColor;
-  opacity:.5;
-  transition:opacity .2s;
-}
-.player-token:hover{
-  transform:scale(1.12);
-}
-.player-token:hover::before{opacity:1;}
-.player-token .token-x{
-  position:absolute;top:-2px;right:-2px;
-  width:16px;height:16px;
-  background:rgba(255,26,60,.9);
-  border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:9px;color:#fff;
-  opacity:0;
-  transition:opacity .15s;
-  pointer-events:none;
-}
-.player-token:hover .token-x{opacity:1;}
+.op-remove:hover{background:rgba(255,26,60,.28);border-color:#ff1a3c;color:#fff;}
+.op-remove:active{transform:scale(.92);}
 
-.add-token-btn{
-  width:44px;height:44px;border-radius:50%;
+/* ── Segmented button groups (controller + difficulty) ── */
+.op-controls{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+}
+.seg-group{
+  display:inline-flex;gap:2px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:8px;padding:2px;
+}
+.seg-group.diff-group{
+  border-color:var(--pcolor,rgba(255,255,255,.1));
+}
+.seg-group.is-hidden{display:none;}
+.seg-btn{
+  border:none;background:transparent;
+  color:rgba(200,210,240,.55);
+  font-family:var(--font-mono);font-size:10.5px;letter-spacing:1px;
+  padding:7px 11px;border-radius:6px;
+  cursor:pointer;white-space:nowrap;
+  transition:background .15s,color .15s,box-shadow .15s;
+}
+.seg-btn:hover{color:#fff;background:rgba(255,255,255,.06);}
+.seg-btn.active{
+  background:rgba(255,255,255,.13);
+  color:#fff;
+  box-shadow:inset 0 0 0 1px var(--pcolor,var(--cyan));
+}
+.seg-btn.active:hover{background:rgba(255,255,255,.18);}
+
+.add-operative-btn{
+  width:100%;margin-top:2px;
+  padding:12px;
   border:1.5px dashed rgba(0,220,255,.4);
   background:rgba(0,220,255,.05);
-  color:var(--cyan);font-size:22px;
+  color:var(--cyan);
+  border-radius:10px;
   cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  transition:background .2s,border-color .2s,transform .2s;
+  font-family:var(--font-mono);font-size:11px;letter-spacing:2px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:background .2s,border-color .2s;
 }
-.add-token-btn:hover{
+.add-operative-btn:hover{
   background:rgba(0,220,255,.12);
   border-color:var(--cyan);
-  transform:scale(1.08);
 }
-.add-token-btn:disabled{opacity:.25;cursor:not-allowed;transform:none;}
+.add-operative-btn:disabled{opacity:.3;cursor:not-allowed;}
+.add-operative-plus{font-size:16px;line-height:1;}
 
 /* ── Start Button ─────────────────────────── */
 .start-btn{
@@ -637,6 +679,105 @@ html,body{
 }
 
 /* ════════════════════════════════════════════
+   ░░ CORNER CONTROLS (mute) ░░
+   ════════════════════════════════════════════ */
+.corner-btn{
+  position:fixed;top:14px;right:14px;
+  z-index:var(--z-toast);
+  width:38px;height:38px;
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  border-radius:50%;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  color:var(--cyan);
+  font-size:16px;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s,border-color .2s,transform .2s;
+}
+.corner-btn:hover{
+  background:rgba(0,220,255,.12);
+  border-color:var(--cyan);
+  transform:scale(1.08);
+}
+.corner-btn.is-muted{color:rgba(200,210,240,.4);}
+
+/* ── How-to-Play trigger + panel ─────────── */
+.howto-trigger{
+  display:block;margin:14px auto 0;
+  padding:8px 18px;
+  background:rgba(0,220,255,.06);
+  border:1px solid var(--cyan-dim);
+  border-radius:20px;
+  color:var(--cyan);
+  font-family:var(--font-mono);
+  font-size:11px;letter-spacing:2px;
+  cursor:pointer;
+  transition:background .2s,border-color .2s;
+}
+.howto-trigger:hover{
+  background:rgba(0,220,255,.14);
+  border-color:var(--cyan);
+}
+
+#howto-overlay{
+  position:fixed;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  z-index:var(--z-modal);
+  padding:24px 16px;
+  background:rgba(6,7,13,.88);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  transition:opacity .35s,transform .35s;
+}
+#howto-overlay.hidden{
+  opacity:0;pointer-events:none;transform:scale(1.03);
+}
+.howto-panel{
+  position:relative;
+  max-width:520px;width:100%;
+  max-height:80vh;overflow-y:auto;
+}
+.howto-close{
+  position:absolute;top:16px;right:16px;
+  z-index:2;
+  width:28px;height:28px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:50%;
+  color:rgba(200,210,240,.7);
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;
+  transition:background .2s,color .2s;
+}
+.howto-close:hover{background:rgba(255,26,60,.2);color:#fff;}
+.howto-title{
+  font-family:var(--font-display);
+  font-size:clamp(1.2rem,4vw,1.6rem);
+  font-weight:700;letter-spacing:1px;
+  color:var(--cyan);
+  margin-bottom:18px;
+  text-shadow:0 0 16px var(--cyan-dim);
+}
+.howto-list{
+  list-style:none;
+  display:flex;flex-direction:column;gap:14px;
+}
+.howto-list li{
+  font-family:var(--font-body);
+  font-size:14px;line-height:1.5;
+  color:rgba(210,218,245,.85);
+  padding-left:16px;
+  border-left:2px solid var(--cyan-dim);
+}
+.howto-list strong{
+  color:var(--cyan);
+  font-weight:600;
+}
+
+/* ════════════════════════════════════════════
    TOAST NOTIFICATIONS
    ════════════════════════════════════════════ */
 #toast-container{
@@ -685,6 +826,9 @@ html,body{
 <!-- ═══════ TOAST ═══════ -->
 <div id="toast-container"></div>
 
+<!-- ═══════ MUTE (persistent across menu + game) ═══════ -->
+<button id="btn-mute" class="corner-btn" title="Mute audio">🔊</button>
+
 <!-- ════════════════════════════════════════
      MENU SCREEN
      ════════════════════════════════════════ -->
@@ -698,6 +842,7 @@ html,body{
         Chain Reaction
         <span>tactical arena</span>
       </div>
+      <button id="btn-howto" class="howto-trigger">❓ How to Play</button>
     </div>
 
     <!-- Grid Config Panel -->
@@ -728,10 +873,13 @@ html,body{
         <div id="player-count-badge" class="players-count-badge">2 / 10</div>
       </div>
 
-      <div id="token-row" class="token-row">
-        <!-- Tokens injected by JS -->
-        <button id="add-player-btn" class="add-token-btn" title="Add player">+</button>
+      <div id="operatives-list" class="operatives-list">
+        <!-- Operative rows injected by JS -->
       </div>
+
+      <button id="add-player-btn" class="add-operative-btn" title="Add operative">
+        <span class="add-operative-plus">+</span> Add Operative
+      </button>
     </div>
 
     <!-- Start Button -->
@@ -778,6 +926,29 @@ html,body{
 </div>
 
 <!-- ════════════════════════════════════════
+     HOW TO PLAY OVERLAY
+     ════════════════════════════════════════ -->
+<div id="howto-overlay" class="hidden">
+  <div class="howto-panel glass-panel">
+    <button id="howto-close" class="howto-close" title="Close">✕</button>
+    <div class="panel-label">Field Manual</div>
+    <h2 class="howto-title">How to Play</h2>
+    <ul class="howto-list">
+      <li><strong>Goal —</strong> capture the entire board and eliminate every other operative.</li>
+      <li><strong>Place an orb —</strong> click any empty cell, or a cell you already own.</li>
+      <li><strong>Critical mass —</strong> a cell explodes once its orb count reaches its capacity:
+        corner cells hold&nbsp;2, edge cells hold&nbsp;3, interior cells hold&nbsp;4.</li>
+      <li><strong>Chain reactions —</strong> an exploding cell fires one orb into each orthogonal
+        neighbour (never diagonally), converting those cells to your colour — this can cascade
+        into a much bigger chain automatically.</li>
+      <li><strong>Elimination —</strong> once every player has placed at least one orb, anyone left
+        with zero orbs on the board is knocked out.</li>
+      <li><strong>Victory —</strong> the last operative with orbs still on the board wins.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
      GAME OVER OVERLAY
      ════════════════════════════════════════ -->
 <div id="gameover-overlay" class="hidden">
@@ -803,6 +974,12 @@ html,body{
    ────────────────────────────────────────── */
 const SoundFX = {
   ctx: null,
+  masterGain: null,
+  // Restored before the AudioContext exists — applied to masterGain.gain
+  // as soon as init() creates it.
+  muted: (() => {
+    try { return localStorage.getItem('cr_muted') === '1'; } catch (e) { return false; }
+  })(),
   menuMusicOsc: null,
   menuMusicGain: null,
 
@@ -810,7 +987,24 @@ const SoundFX = {
     if (!this.ctx) {
       // Context initialized on user tap to comply with browser safety rules
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // Every sound routes through this single node so mute is one flag,
+      // not a per-sound check scattered across the file.
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = this.muted ? 0 : 1;
+      this.masterGain.connect(this.ctx.destination);
     }
+  },
+
+  setMuted(muted) {
+    this.muted = muted;
+    try { localStorage.setItem('cr_muted', muted ? '1' : '0'); } catch (e) { /* ignore */ }
+    if (this.masterGain) this.masterGain.gain.value = muted ? 0 : 1;
+  },
+
+  toggleMute() {
+    this.init();
+    this.setMuted(!this.muted);
+    return this.muted;
   },
 
   playClick() {
@@ -828,7 +1022,7 @@ const SoundFX = {
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.06);
 
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.masterGain);
 
     osc.start();
     osc.stop(this.ctx.currentTime + 0.06);
@@ -849,7 +1043,7 @@ const SoundFX = {
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
 
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.masterGain);
 
     osc.start();
     osc.stop(this.ctx.currentTime + 0.2);
@@ -868,7 +1062,7 @@ const SoundFX = {
     this.menuMusicGain.gain.setValueAtTime(0.05, this.ctx.currentTime); // Very subtle
 
     this.menuMusicOsc.connect(this.menuMusicGain);
-    this.menuMusicGain.connect(this.ctx.destination);
+    this.menuMusicGain.connect(this.masterGain);
 
     this.menuMusicOsc.start();
     // Oscillator runs indefinitely until stopMenuMusic() is called
@@ -916,7 +1110,7 @@ const SoundFX = {
         gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.5); // Fade over 0.5s
 
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.masterGain);
 
         osc.start();
         osc.stop(this.ctx.currentTime + 0.5);
@@ -939,7 +1133,7 @@ const SoundFX = {
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
 
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.masterGain);
 
     osc.start();
     osc.stop(this.ctx.currentTime + 0.08);
@@ -960,7 +1154,7 @@ const SoundFX = {
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
 
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.masterGain);
 
     osc.start();
     osc.stop(this.ctx.currentTime + 0.12);
@@ -1009,9 +1203,21 @@ let menuState = {
   cols: 6,
   players: [
     { id:0, color:PLAYER_COLORS[0], name:PLAYER_NAMES[0], isBot:false },
-    { id:1, color:PLAYER_COLORS[1], name:PLAYER_NAMES[1], isBot:true },
+    { id:1, color:PLAYER_COLORS[1], name:PLAYER_NAMES[1], isBot:true, difficulty:'medium' },
   ]
 };
+
+/* ──────────────────────────────────────────
+   PLAYER CONTROLLER STATE (Human / Easy / Medium / Hard)
+   ────────────────────────────────────────── */
+function setControllerState(p, state) {
+  if (state === 'human') {
+    p.isBot = false;
+  } else {
+    p.isBot = true;
+    p.difficulty = state;
+  }
+}
 
 let game = null;
 let lastSnapshot = null;
@@ -1040,6 +1246,10 @@ const $gameoverOverlay = document.getElementById('gameover-overlay');
 const $goName        = document.getElementById('go-name');
 const $toastContainer = document.getElementById('toast-container');
 const $playerAuraEl  = document.getElementById('player-aura');
+const $btnMute       = document.getElementById('btn-mute');
+const $btnHowto      = document.getElementById('btn-howto');
+const $howtoOverlay  = document.getElementById('howto-overlay');
+const $howtoClose    = document.getElementById('howto-close');
 
 /* ──────────────────────────────────────────
    BG CANVAS — ANIMATED ISOMETRIC GRID
@@ -1141,49 +1351,73 @@ function initMenu() {
 }
 
 function renderTokens() {
-  const row    = document.getElementById('token-row');
+  const list   = document.getElementById('operatives-list');
   const addBtn = document.getElementById('add-player-btn');
   const badge  = document.getElementById('player-count-badge');
 
-  // Remove all tokens (keep add-btn)
-  Array.from(row.querySelectorAll('.player-token')).forEach(t => t.remove());
+  list.innerHTML = '';
 
-  // Rebuild
   menuState.players.forEach((p, idx) => {
-    const tok = document.createElement('div');
-    tok.className = 'player-token';
-    tok.style.cssText = `background:${hexToRgba(p.color,.18)};
-      color:${p.color};
-      box-shadow: 0 0 12px ${hexToRgba(p.color,.35)};
-      cursor:pointer;
-      position:relative;`;
-    tok.style.setProperty('current-color', p.color);
-    
-    const typeLabel = p.isBot ? '🤖 BOT' : '👤 HUMAN';
-    tok.innerHTML = `
-      <span style="font-size:10px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px;">
-        <span>${p.name.substring(0,3).toUpperCase()}</span>
-        <span style="font-size:8px;opacity:0.8;">${typeLabel}</span>
-      </span>
-      <span class="token-x">✕</span>`;
-    tok.title = `${p.name} (${typeLabel}) — click to toggle type, X to remove`;
+    const isBot = p.isBot;
+    const diff  = p.difficulty || 'medium';
 
-    // Click to toggle bot/human
-    tok.addEventListener('click', (e) => {
-      if (e.target.closest('.token-x')) return; // Don't toggle if clicking X
-      try { SoundFX.playMenuSelect(); } catch (e2) { /* ignore */ }
-      p.isBot = !p.isBot;
+    const row = document.createElement('div');
+    row.className = 'op-row';
+    row.style.setProperty('--pcolor', p.color);
+    row.innerHTML = `
+      <div class="op-row-top">
+        <div class="op-id">
+          <span class="op-dot"></span>
+          <span class="op-name">${p.name}</span>
+        </div>
+        <button type="button" class="op-remove" title="Remove ${p.name}" aria-label="Remove ${p.name}">✕</button>
+      </div>
+      <div class="op-controls">
+        <div class="seg-group" role="group" aria-label="Controller for ${p.name}">
+          <button type="button" class="seg-btn${!isBot ? ' active' : ''}" data-role="human">👤 Human</button>
+          <button type="button" class="seg-btn${isBot ? ' active' : ''}" data-role="bot">🤖 Bot</button>
+        </div>
+        <div class="seg-group diff-group${isBot ? '' : ' is-hidden'}" role="group" aria-label="Bot difficulty for ${p.name}">
+          <button type="button" class="seg-btn diff-btn${diff === 'easy' ? ' active' : ''}" data-diff="easy">Easy</button>
+          <button type="button" class="seg-btn diff-btn${diff === 'medium' ? ' active' : ''}" data-diff="medium">Med</button>
+          <button type="button" class="seg-btn diff-btn${diff === 'hard' ? ' active' : ''}" data-diff="hard">Hard</button>
+        </div>
+      </div>`;
+
+    // Human / Bot — explicit two-way toggle, not a cycling click.
+    row.querySelector('[data-role="human"]').addEventListener('click', () => {
+      if (!p.isBot) return;
+      try { SoundFX.playMenuSelect(); } catch (e) { /* ignore */ }
+      setControllerState(p, 'human');
+      renderTokens();
+    });
+    row.querySelector('[data-role="bot"]').addEventListener('click', () => {
+      if (p.isBot) return;
+      try { SoundFX.playMenuSelect(); } catch (e) { /* ignore */ }
+      setControllerState(p, p.difficulty || 'medium'); // remembers last difficulty
       renderTokens();
     });
 
-    // X button to remove
-    tok.querySelector('.token-x').addEventListener('click', (e) => {
-      e.stopPropagation();
+    // Difficulty — explicit Easy/Med/Hard buttons, only shown for bots.
+    row.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nextDiff = btn.dataset.diff;
+        if (p.difficulty === nextDiff) return;
+        try { SoundFX.playMenuSelect(); } catch (e) { /* ignore */ }
+        setControllerState(p, nextDiff);
+        renderTokens();
+      });
+    });
+
+    // Remove — always visible, always tappable (previous version relied on
+    // a hover-only icon with pointer-events:none, so it never actually
+    // received clicks — this button has neither restriction).
+    row.querySelector('.op-remove').addEventListener('click', () => {
       if (menuState.players.length <= 2) {
         showToast('Minimum 2 operatives required', 'warn');
         return;
       }
-      try { SoundFX.playMenuRemove(); } catch (e2) { /* ignore */ }
+      try { SoundFX.playMenuRemove(); } catch (e) { /* ignore */ }
       menuState.players.splice(idx, 1);
       // Re-assign ids
       menuState.players.forEach((pp, i) => {
@@ -1193,7 +1427,8 @@ function renderTokens() {
       });
       renderTokens();
     });
-    row.insertBefore(tok, addBtn);
+
+    list.appendChild(row);
   });
 
   addBtn.disabled = menuState.players.length >= 10;
@@ -1351,22 +1586,33 @@ function bindGameEvents() {
   game.on('turn_change', async ({ currentPlayer }) => {
     setActivePlayer(currentPlayer);
 
+    // The engine's last `state_change` snapshot still has `currentPlayer`
+    // set to whoever just moved — `_advanceTurn()` emits `turn_change`
+    // without a fresh snapshot. Patch it in immediately so the player
+    // strip's active-player highlight doesn't lag one move behind.
+    if (lastSnapshot) {
+      lastSnapshot = { ...lastSnapshot, currentPlayer };
+      updatePlayerStrip(lastSnapshot);
+    }
+
     // ═══ AI LOGIC — Handle Multiple Bot Players ═══
     // Check if the current player is a bot
     const currentPlayerConfig = menuState.players[currentPlayer];
-    if (currentPlayerConfig && currentPlayerConfig.isBot && !game._gameOver) {
+    if (currentPlayerConfig && currentPlayerConfig.isBot && !game.isGameOver) {
       // Block human inputs on the canvas while AI thinks
       $gameCanvas.style.pointerEvents = 'none';
-      
+
       // Add a slight 600ms artificial delay so the bot feels natural, not instant
       await new Promise(resolve => setTimeout(resolve, 600));
 
       // Get the optimal coordinates from our heuristic script
-      const botMove = ChainReactionAI.getBestMove(game, currentPlayer);
-      
+      const botMove = ChainReactionAI.getBestMove(game, currentPlayer, currentPlayerConfig.difficulty);
+
       if (botMove) {
-        // Execute the automated click into the core engine
-        game.handlePlayerClick(botMove.row, botMove.col);
+        // Execute the automated click into the core engine — awaited so
+        // pointer events aren't restored until the bot's cascade (and any
+        // resulting turn_change for the *next* bot) has actually settled.
+        await game.handlePlayerClick(botMove.row, botMove.col);
       }
 
       // Restore human touchscreen inputs once AI turn finishes
@@ -1401,6 +1647,10 @@ function bindGameEvents() {
   game.on('error', ({ message }) => {
     showToast(message, 'error');
   });
+
+  game.on('cascade_capped', () => {
+    showToast('Cascade paused — resolving further next move', 'warn');
+  });
 }
 
 /* ──────────────────────────────────────────
@@ -1416,7 +1666,7 @@ function onCanvasClick(e) {
   if (!game || !lastSnapshot) return;
   // Read live engine state — never the stale snapshot — so the
   // isProcessing flag is always current after a cascade settles.
-  if (game._isProcessing || game._gameOver) return;
+  if (game.isProcessing || game.isGameOver) return;
 
   const rect = $gameCanvas.getBoundingClientRect();
   const px = (e.clientX - rect.left);
@@ -1864,11 +2114,40 @@ function hexToRgba(hex, alpha = 1) {
 }
 
 /* ──────────────────────────────────────────
+   MUTE CONTROL
+   ────────────────────────────────────────── */
+function refreshMuteIcon() {
+  $btnMute.textContent = SoundFX.muted ? '🔇' : '🔊';
+  $btnMute.classList.toggle('is-muted', SoundFX.muted);
+  $btnMute.title = SoundFX.muted ? 'Unmute audio' : 'Mute audio';
+}
+
+$btnMute.addEventListener('click', () => {
+  SoundFX.toggleMute();
+  refreshMuteIcon();
+});
+
+/* ──────────────────────────────────────────
+   HOW-TO-PLAY PANEL
+   ────────────────────────────────────────── */
+$btnHowto.addEventListener('click', () => {
+  try { SoundFX.playMenuSelect(); } catch (e) { /* ignore */ }
+  $howtoOverlay.classList.remove('hidden');
+});
+$howtoClose.addEventListener('click', () => {
+  $howtoOverlay.classList.add('hidden');
+});
+$howtoOverlay.addEventListener('click', (e) => {
+  if (e.target === $howtoOverlay) $howtoOverlay.classList.add('hidden');
+});
+
+/* ──────────────────────────────────────────
    BOOT
    ────────────────────────────────────────── */
 resizeBgCanvas();
 drawBg();
 initMenu();
+refreshMuteIcon();
 
 </script>
 </body>
