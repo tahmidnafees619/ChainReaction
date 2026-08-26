@@ -14,6 +14,21 @@ const path = require('path');
 
 const OTHERS_DIR = path.join(__dirname, '..', '..', 'others');
 
+// Required course-identification header — rendered into the actual PDF
+// margin band (via Playwright's headerTemplate) so it repeats on every
+// page above the content, not just inline text at the top of page 1.
+const COURSE_HEADER = `
+  <div style="width:100%;font-size:7px;font-family:'Times New Roman',Times,serif;
+              text-align:center;color:#333;padding:0 0.6in;">
+    CSE440 &ndash; Section 2 &nbsp;|&nbsp; Project Group: A &nbsp;|&nbsp;
+    Md. Tahmidur Rahman Nafees (2022454642) &middot; Sakib Rahman Rohan (2011350042)
+  </div>`;
+const PAGE_NUMBER_FOOTER = `
+  <div style="width:100%;font-size:7px;font-family:'Times New Roman',Times,serif;
+              text-align:center;color:#333;">
+    <span class="pageNumber"></span> / <span class="totalPages"></span>
+  </div>`;
+
 async function renderOne(htmlPath, cssPath, pdfOutPath) {
   const html = fs.readFileSync(htmlPath, 'utf8');
   const css = fs.readFileSync(cssPath, 'utf8');
@@ -28,7 +43,14 @@ async function renderOne(htmlPath, cssPath, pdfOutPath) {
     path: pdfOutPath,
     format: 'Letter',
     printBackground: true,
-    margin: { top: '0in', bottom: '0in', left: '0in', right: '0in' }, // margins are handled by @page in CSS
+    displayHeaderFooter: true,
+    headerTemplate: COURSE_HEADER,
+    footerTemplate: PAGE_NUMBER_FOOTER,
+    // Explicit JS margins take precedence over the CSS @page rule once
+    // displayHeaderFooter is on — top is bumped up from the CSS value
+    // (0.75in) to make room for the course-header band; the rest match
+    // ieee_style.css's @page margins so the body layout is unaffected.
+    margin: { top: '0.95in', right: '0.62in', bottom: '0.85in', left: '0.62in' },
   });
   await browser.close();
   fs.unlinkSync(tmpHtml); // clean up the intermediate merged HTML

@@ -123,6 +123,8 @@ and the AI's scoring formulas.
 
 ## Authors
 
+**Course:** CSE440, Section 2 &middot; **Project Group:** A
+
 | Name | ID | Email |
 |---|---|---|
 | Md. Tahmidur Rahman Nafees | 2022454642 | tahmidur.nafees@northsouth.edu |
