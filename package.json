@@ -5,13 +5,14 @@
   "private": true,
   "license": "MIT",
   "author": "tahmidnafees619",
-  "main": "src/ChainReactionEngine.js",
+  "main": "support/src/ChainReactionEngine.js",
   "scripts": {
     "test": "npm run test:engine && npm run test:ai",
-    "test:engine": "node tests/ChainReactionEngine.test.js",
-    "test:ai": "node tests/ChainReactionAI.test.js",
-    "test:e2e": "node tests/e2e/game.e2e.test.js",
-    "test:all": "npm run test:engine && npm run test:ai && npm run test:e2e"
+    "test:engine": "node support/tests/ChainReactionEngine.test.js",
+    "test:ai": "node support/tests/ChainReactionAI.test.js",
+    "test:e2e": "node support/tests/e2e/game.e2e.test.js",
+    "test:all": "npm run test:engine && npm run test:ai && npm run test:e2e",
+    "reports:build": "node support/reports/render.js"
   },
   "keywords": [
     "chain-reaction",

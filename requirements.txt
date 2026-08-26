@@ -1,0 +1,30 @@
+# requirements.txt
+#
+# This project is a browser game written in vanilla JavaScript/HTML/CSS,
+# not Python — so there is nothing here in the pip sense. This file exists
+# to satisfy the submission checklist and to point you to the real
+# dependency manifest for this stack.
+#
+# Python dependencies: NONE. No Python code is used anywhere in this
+# project.
+#
+# ── Actual dependency manifest ──────────────────────────────────────────
+# See package.json / package-lock.json (Node.js / npm equivalent of this
+# file) for the authoritative, version-pinned list.
+#
+# Runtime (playing the game):
+#   NONE. main.html is a static page — open it in a modern browser
+#   (Chrome, Edge, Firefox, Safari, recent versions) and it runs with zero
+#   installs. The only network resource it loads is a Google Fonts
+#   stylesheet (cosmetic only; the game works without it).
+#
+# Development / testing only (not required to play):
+#   Node.js        >= 14   (engine/AI unit tests — no packages needed)
+#   playwright      ^1.62.1 (dev dependency; browser end-to-end test suite
+#                            only — see support/tests/e2e/)
+#
+# To install the dev/test tooling:
+#   npm install
+#   npx playwright install chromium
+#
+# See README.md → "Running the Tests" for full instructions.

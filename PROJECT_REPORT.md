@@ -1,7 +1,10 @@
 # Project Report: Chain Reaction — Nexus Protocol
 
 **Type:** Browser-based strategy game (client-side, pass-and-play, human + AI)
-**Author:** tahmidnafees619
+**Authors:** Md. Tahmidur Rahman Nafees (2022454642, tahmidur.nafees@northsouth.edu) ·
+Sakib Rahman Rohan (2011350042, rahman.rohan@northsouth.edu)
+**Department:** Electrical and Computer Engineering, North South University
+**Submitted to:** Mohammad Shifat-E-Rabbi (rabbi.mohammad@northsouth.edu)
 **License:** MIT
 **Repository state at time of writing:** branch `feature/next-upgrades`, 8 commits, working tree clean
 
@@ -12,8 +15,8 @@
 Chain Reaction is a browser implementation of the classic orb/critical-mass strategy game, built
 as a single static HTML page backed by a dependency-free JavaScript game engine. The project
 demonstrates a clean separation between game logic and presentation: the engine
-(`src/ChainReactionEngine.js`) is fully headless and event-driven, the AI (`src/ChainReactionAI.js`)
-is a pure function over engine snapshots, and the frontend (`index.html`) owns all rendering,
+(`support/src/ChainReactionEngine.js`) is fully headless and event-driven, the AI (`support/src/ChainReactionAI.js`)
+is a pure function over engine snapshots, and the frontend (`main.html`) owns all rendering,
 audio, and input handling. The game supports 2–10 players in any mix of human and AI (three
 difficulty tiers), configurable grid sizes, and a cyberpunk "Nexus Protocol" visual theme built
 entirely from Canvas 2D, CSS, and procedurally synthesized Web Audio — no image, audio, or font
@@ -59,7 +62,7 @@ static code review.
 
 ```
                  ┌──────────────────────────┐
-   user input →  │        index.html        │  ← rendering, audio, DOM, input
+   user input →  │         main.html         │  ← rendering, audio, DOM, input
                  │  (menu / game / gameover  │
                  │   screens; canvas loop)   │
                  └────────────┬─────────────┘
@@ -105,18 +108,18 @@ The AI module takes a `ChainReactionGame` instance and a player id, reads a snap
 | Audio | Web Audio API, oscillators/gain nodes only — no audio files |
 | Fonts | Google Fonts CDN (`Orbitron`, `Share Tech Mono`, `Rajdhani`) — the only external resource |
 | Testing (unit) | Node.js built-ins; hand-rolled `assert`/`section` helpers (no Jest/Mocha/etc.) |
-| Testing (e2e) | Playwright — the project's one dev-only dependency, driving a real headless Chromium against `index.html`; not shipped, not required to play the game |
+| Testing (e2e) | Playwright — the project's one dev-only dependency, driving a real headless Chromium against `main.html`; not shipped, not required to play the game |
 | CI | GitHub Actions (`.github/workflows/ci.yml`) — runs the unit suites (no install) and the e2e suite (with Playwright installed) on every push |
 
 ## 6. Module Reference
 
-### 6.1 `src/ChainReactionEngine.js` (~870 lines)
+### 6.1 `support/src/ChainReactionEngine.js` (~870 lines)
 Exports `ChainReactionGame` (plus `EMPTY` and `EXPLOSION_DELAY_MS`). Owns the grid (`Cell[][]`),
 turn order, elimination/win detection, and the async wave-based cascade resolver. Capacity per
 cell is derived from position (corner → 2, edge → 3, interior → 4). Config validation
 (`_validateConfig`) rejects malformed grid/player/cascade-cap values with a `RangeError`.
 
-### 6.2 `src/ChainReactionAI.js` (~274 lines) — AI Design Deep Dive
+### 6.2 `support/src/ChainReactionAI.js` (~274 lines) — AI Design Deep Dive
 
 Exports `ChainReactionAI` with a single static entry point:
 
@@ -277,7 +280,7 @@ evaluator (six features instead of one or two, real cascade simulation instead o
 was judged the better trade-off for a bot that has to respond in well under its own 600ms "thinking"
 delay on boards up to 12×12.
 
-### 6.3 `index.html` (~2250 lines)
+### 6.3 `main.html` (~2250 lines)
 Single-file frontend: CSS theme (`:root` custom properties for the neon/glass palette), three
 screens (menu, game, game-over) plus overlays (How to Play, toasts), the `SoundFX` procedural
 audio module, the canvas render loop (`requestAnimationFrame`), the particle system, and all DOM
@@ -320,7 +323,7 @@ Two layers are used:
    a win, mid-cascade input blocking, neighbor calculation, the cascade safety cap, and the public
    state getters — plus AI legality, win-taking behavior, and no-legal-move handling.
 2. **A checked-in browser end-to-end suite** (`tests/e2e/game.e2e.test.js`, `npm run test:e2e`)
-   using Playwright to drive a real headless Chromium against the actual `index.html`. This tier
+   using Playwright to drive a real headless Chromium against the actual `main.html`. This tier
    exists specifically because bugs 4–9 in §7 were *only* ever found by driving the real app —
    layout/CSS-stacking bugs and click-timing race conditions are invisible to a DOM-less unit test
    by construction. What started as throwaway verification scripts during review sessions has been
@@ -370,26 +373,38 @@ Run with `npm test` (unit only, no install) or `npm run test:all` (everything, r
 
 ```
 Chain Reaction/
-├── index.html                     # Entry point — UI, canvas renderer, audio, all frontend logic
-├── src/
-│   ├── ChainReactionEngine.js     # Headless game engine (rules, state, event system)
-│   └── ChainReactionAI.js         # Bot move selection (weighted heuristic, difficulty tiers)
-├── tests/
-│   ├── ChainReactionEngine.test.js
-│   ├── ChainReactionAI.test.js
-│   └── e2e/
-│       └── game.e2e.test.js       # Browser e2e suite (Playwright, dev-only dependency)
-├── docs/
-│   └── REQUIREMENTS.md            # Functional / non-functional requirements
+├── main.html                       # Entry point — open this to play
+├── requirements.txt                 # Dependency manifest (JS project — see file for detail)
+├── data/
+│   └── README.md                    # No datasets are used; this folder documents why
+├── support/
+│   ├── src/
+│   │   ├── ChainReactionEngine.js  # Headless game engine (rules, state, event system)
+│   │   └── ChainReactionAI.js      # Bot move selection (weighted heuristic, difficulty tiers)
+│   ├── tests/
+│   │   ├── ChainReactionEngine.test.js
+│   │   ├── ChainReactionAI.test.js
+│   │   └── e2e/
+│   │       └── game.e2e.test.js    # Browser e2e suite (Playwright, dev-only dependency)
+│   └── docs/
+│       └── REQUIREMENTS.md          # Functional / non-functional requirements
+├── others/
+│   ├── final_report.pdf             # This report, typeset (IEEE-style)
+│   ├── update_report.pdf            # Mid-project status report
+│   └── README.md                    # Notes on what's here / still pending
 ├── .github/
-│   └── workflows/ci.yml           # Runs the full test suite on every push
-├── PROJECT_REPORT.md              # This file
+│   └── workflows/ci.yml             # Runs the full test suite on every push
+├── PROJECT_REPORT.md                # This file's source (Markdown; see also others/final_report.pdf)
 ├── package.json
-├── package-lock.json              # Committed — pins the one dev dependency (Playwright) for CI
-├── LICENSE                        # MIT
+├── package-lock.json                # Committed — pins the one dev dependency (Playwright) for CI
+├── LICENSE                          # MIT
 ├── .gitignore
 └── README.md
 ```
+
+Layout note: `main.html` at the repository root, `requirements.txt`, `data/`, and `others/` follow
+this project's required course submission structure; `support/` holds all other code (previously
+organized as top-level `src/`/`tests/`/`docs/` — see §11).
 
 ## 11. Development History
 
@@ -408,9 +423,12 @@ Beyond these commits, this working session additionally: fixed the five robustne
 issues in §7 (#1–5); reworked the AI from rule-based to weighted-heuristic simulation with
 difficulty tiers; added the mute system, How to Play panel, and a colorblind-glyph feature (later
 removed per feedback); redesigned the player-setup UI from cramped cycling tokens to explicit,
-touch-friendly controls after the remove-button bug report (#6); and restructured the repository
-into `src/`/`tests/`/`docs/` with this report and the accompanying requirements/README/license/
-package files.
+touch-friendly controls after the remove-button bug report (#6); found and fixed three further
+frontend bugs (#7–9, §7) during a dedicated review-and-verify pass; added the checked-in Playwright
+e2e suite and CI workflow that pass now catch automatically; and restructured the repository twice
+— first into `src/`/`tests`/`docs/` for general project hygiene, then a second time into the
+course's required submission layout (`main.html` at root, `requirements.txt`, `data/`, `support/`,
+`others/` — see §10) once that specification was provided.
 
 ## 12. Known Limitations
 

@@ -1,0 +1,208 @@
+/* Shared IEEE-conference-style print CSS for both reports.
+   Rendered to PDF via Playwright's page.pdf() (Chromium print engine). */
+
+@page {
+  size: letter;
+  margin: 0.75in 0.62in 0.85in 0.62in;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  font-family: 'Times New Roman', Times, 'Nimbus Roman', serif;
+  font-size: 10pt;
+  line-height: 1.15;
+  color: #000;
+  background: #fff;
+}
+
+/* ── Title block (full width, not columned) ─────────────────────── */
+.title-block {
+  text-align: center;
+  margin-bottom: 14pt;
+}
+.paper-title {
+  font-size: 18pt;
+  font-weight: bold;
+  line-height: 1.25;
+  margin-bottom: 8pt;
+}
+.paper-authors {
+  font-size: 11pt;
+  margin-bottom: 2pt;
+}
+.paper-affiliation {
+  font-size: 9.5pt;
+  font-style: italic;
+  color: #222;
+  margin-bottom: 2pt;
+}
+.paper-meta {
+  font-size: 8.5pt;
+  color: #444;
+  margin-top: 4pt;
+}
+
+.abstract-block {
+  margin: 0 0.35in 10pt 0.35in;
+  font-size: 9.5pt;
+}
+.abstract-block .label {
+  font-weight: bold;
+  font-style: italic;
+}
+.keywords {
+  font-size: 9.5pt;
+  margin: 4pt 0.35in 0 0.35in;
+}
+.keywords .label {
+  font-weight: bold;
+  font-style: italic;
+}
+
+/* ── Two-column body ─────────────────────────────────────────────── */
+.columns {
+  column-count: 2;
+  column-gap: 0.28in;
+  column-rule: none;
+  text-align: justify;
+  hyphens: auto;
+}
+
+h2.section {
+  font-size: 10.5pt;
+  font-weight: bold;
+  letter-spacing: 0.4pt;
+  text-align: center;
+  margin: 10pt 0 5pt 0;
+  break-after: avoid;
+  break-inside: avoid;
+}
+h3.subsection {
+  font-size: 10pt;
+  font-weight: bold;
+  font-style: italic;
+  margin: 7pt 0 3pt 0;
+  break-after: avoid;
+}
+p {
+  margin: 0 0 6pt 0;
+  text-indent: 1em;
+}
+p:first-of-type, h2.section + p, h3.subsection + p {
+  text-indent: 0;
+}
+
+/* ── Figures / tables ────────────────────────────────────────────── */
+figure {
+  margin: 6pt 0 8pt 0;
+  break-inside: avoid;
+  text-align: center;
+}
+figure pre.ascii-fig {
+  display: inline-block;
+  text-align: left;
+  font-family: 'Courier New', monospace;
+  font-size: 7.6pt;
+  line-height: 1.15;
+  background: #f7f7f7;
+  border: 0.5pt solid #999;
+  padding: 5pt 7pt;
+  margin: 0;
+}
+figcaption {
+  font-size: 8.5pt;
+  margin-top: 4pt;
+}
+figcaption .fig-label { font-weight: bold; }
+
+table.report-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 8.3pt;
+  margin: 4pt 0 2pt 0;
+  break-inside: avoid;
+}
+table.report-table caption {
+  font-size: 8.5pt;
+  caption-side: top;
+  margin-bottom: 3pt;
+  text-align: center;
+}
+table.report-table caption .table-label {
+  font-weight: bold;
+  font-variant: small-caps;
+}
+table.report-table th, table.report-table td {
+  border-top: 0.75pt solid #000;
+  border-bottom: 0.75pt solid #000;
+  padding: 2.5pt 5pt;
+  text-align: center;
+}
+table.report-table thead th {
+  border-bottom: 0.75pt solid #000;
+  font-weight: bold;
+}
+table.report-table tbody tr:last-child td {
+  border-bottom: 1.25pt solid #000;
+}
+
+.full-width {
+  column-span: all;
+}
+
+/* ── Equations ───────────────────────────────────────────────────── */
+.equation {
+  display: flex;
+  align-items: center;
+  margin: 7pt 0;
+  break-inside: avoid;
+}
+.equation .eq-body {
+  flex: 1;
+  text-align: center;
+  font-family: 'Cambria Math', 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 10pt;
+}
+.equation .eq-num {
+  flex: 0 0 auto;
+  font-style: normal;
+  font-size: 9.5pt;
+  padding-left: 4pt;
+}
+.eq-inline {
+  font-style: italic;
+  font-family: 'Cambria Math', 'Times New Roman', serif;
+}
+
+/* ── References ──────────────────────────────────────────────────── */
+.references {
+  font-size: 8.7pt;
+}
+.references ol {
+  margin: 0; padding-left: 0;
+  list-style: none;
+  counter-reset: refcounter;
+}
+.references li {
+  counter-increment: refcounter;
+  margin: 0 0 4pt 0;
+  padding-left: 1.5em;
+  text-indent: -1.5em;
+}
+.references li::before {
+  content: "[" counter(refcounter) "]  ";
+}
+
+/* ── Misc ────────────────────────────────────────────────────────── */
+strong.term { font-weight: bold; }
+code, .mono { font-family: 'Courier New', monospace; font-size: 9pt; }
+.page-break { break-before: page; }
+ul.report-list, ol.report-list {
+  margin: 2pt 0 6pt 1.1em;
+  padding: 0;
+  font-size: 10pt;
+}
+ul.report-list li, ol.report-list li { margin-bottom: 2pt; }
