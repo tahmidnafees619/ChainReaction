@@ -4,6 +4,7 @@
 **Authors:** Md. Tahmidur Rahman Nafees (2022454642, tahmidur.nafees@northsouth.edu) ·
 Sakib Rahman Rohan (2011350042, rahman.rohan@northsouth.edu)
 **Department:** Electrical and Computer Engineering, North South University
+**Course:** CSE440, Section 2 **Project Group:** A
 **Submitted to:** Mohammad Shifat-E-Rabbi (rabbi.mohammad@northsouth.edu)
 **License:** MIT
 **Repository state at time of writing:** branch `feature/next-upgrades`, 8 commits, working tree clean
