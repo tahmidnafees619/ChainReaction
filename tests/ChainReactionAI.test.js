@@ -1,6 +1,6 @@
 /**
  * CHAIN REACTION AI — SMOKE TEST SUITE
- * Run with:  node ChainReactionAI.test.js
+ * Run with:  node tests/ChainReactionAI.test.js  (or: npm test)
  *
  * This is not exhaustive coverage of the heuristic's tuning — it's a
  * sanity net around the AI rewrite: legal moves only, wins get taken,
@@ -10,8 +10,8 @@
 
 'use strict';
 
-const { ChainReactionGame } = require('./ChainReactionEngine');
-const { ChainReactionAI } = require('./ChainReactionAI');
+const { ChainReactionGame } = require('../src/ChainReactionEngine');
+const { ChainReactionAI } = require('../src/ChainReactionAI');
 
 let passed = 0;
 let failed = 0;

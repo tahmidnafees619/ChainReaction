@@ -1,13 +1,13 @@
 /**
  * CHAIN REACTION ENGINE — TEST SUITE
- * Run with:  node ChainReactionEngine.test.js
+ * Run with:  node tests/ChainReactionEngine.test.js  (or: npm test)
  *
  * Uses only Node.js built-ins. No test framework required.
  */
 
 'use strict';
 
-const { ChainReactionGame, EMPTY } = require('./ChainReactionEngine');
+const { ChainReactionGame, EMPTY } = require('../src/ChainReactionEngine');
 
 // ─────────────────────────────────────────────
 //  Async test queue — must be declared first

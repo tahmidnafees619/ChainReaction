@@ -964,8 +964,8 @@ html,body{
 </div>
 
 <!-- ═══════ ENGINE SCRIPT ═══════ -->
-<script src="ChainReactionEngine.js"></script>
-<script src="ChainReactionAI.js"></script>
+<script src="src/ChainReactionEngine.js"></script>
+<script src="src/ChainReactionAI.js"></script>
 
 <script>
 'use strict';
@@ -1483,6 +1483,7 @@ function setupCanvas(rows, cols) {
 function startGame() {
   const { rows, cols, players } = menuState;
   game = new ChainReactionGame({ rows, cols, totalPlayers: players.length });
+  gameSessionId++; // invalidate any bot callback still "thinking" from a previous match
 
   // Clear FX state
   particles.length = 0;
@@ -1492,6 +1493,8 @@ function startGame() {
 
   showScreen('game-screen');
   $gameoverOverlay.classList.add('hidden');
+  dockMuteInHud();
+  $gameCanvas.style.pointerEvents = 'auto'; // guard against a stale bot leaving this disabled
 
   // Small delay to let the DOM layout settle before sizing canvas
   setTimeout(() => {
@@ -1502,6 +1505,10 @@ function startGame() {
     setActivePlayer(game.currentPlayer);
     renderFrame();
     startRenderLoop();
+
+    // If player 0 is bot-controlled, nothing else will ever kick off its
+    // first move — see triggerBotTurnIfNeeded() for why.
+    triggerBotTurnIfNeeded(game.currentPlayer, gameSessionId);
   }, 60);
 }
 
@@ -1570,87 +1577,144 @@ function setActivePlayer(playerId) {
 }
 
 /* ──────────────────────────────────────────
+   BOT TURN TRIGGER
+   ────────────────────────────────────────── */
+/**
+ * Incremented every time a match is (re)started — startGame(), the restart
+ * button, and rematch all bump this. A bot's "thinking" delay spans an
+ * `await`, and in that window the user can bail to the menu (`game`
+ * becomes null) or hit Restart/Rematch (the *same* `game` object is reset
+ * in place, so a plain `game !== capturedGame` identity check would miss
+ * it). Capturing this counter and re-checking it after the delay is what
+ * lets a stale callback recognize "the match I was thinking for is gone"
+ * in both cases, instead of throwing on a null `game` or — worse —
+ * silently playing a move into whatever match replaced it.
+ */
+let gameSessionId = 0;
+
+/**
+ * Plays a bot's turn if `currentPlayer` is bot-controlled.
+ *
+ * This is called both from the `turn_change` handler (for every turn
+ * after the first) AND explicitly once right after a game starts. The
+ * engine only emits `turn_change` when the active player *changes* —
+ * the very first turn (player 0, right after construction) is never a
+ * "change" from anything, so nothing would ever trigger player 0's move
+ * if that slot were a bot without this explicit kickoff.
+ */
+async function triggerBotTurnIfNeeded(currentPlayer, sessionId) {
+  const currentPlayerConfig = menuState.players[currentPlayer];
+  if (!game || !currentPlayerConfig || !currentPlayerConfig.isBot || game.isGameOver) return;
+
+  // Block human inputs on the canvas while AI thinks
+  $gameCanvas.style.pointerEvents = 'none';
+
+  // Add a slight 600ms artificial delay so the bot feels natural, not instant
+  await new Promise(resolve => setTimeout(resolve, 600));
+
+  // The match may have been left, restarted, or replaced while "thinking" —
+  // bail out rather than crash on a null game or act on a stale one.
+  if (!game || sessionId !== gameSessionId || game.isGameOver) return;
+
+  // Get the optimal coordinates from our heuristic script
+  const botMove = ChainReactionAI.getBestMove(game, currentPlayer, currentPlayerConfig.difficulty);
+
+  if (botMove) {
+    // Execute the automated click into the core engine — awaited so
+    // pointer events aren't restored until the bot's cascade (and any
+    // resulting turn_change for the *next* bot) has actually settled.
+    await game.handlePlayerClick(botMove.row, botMove.col);
+  }
+
+  // Restore human touchscreen inputs once AI turn finishes — but only for
+  // the match that's still actually current; a stale callback must not
+  // reach across into whatever match replaced it.
+  if (game && sessionId === gameSessionId) {
+    $gameCanvas.style.pointerEvents = 'auto';
+  }
+}
+
+/* ──────────────────────────────────────────
    GAME EVENT BINDINGS
    ────────────────────────────────────────── */
+/**
+ * Unsubscribe handles for every listener `bindGameEvents()` registers on
+ * the current `game` instance. `game.on()` returns an unsubscribe
+ * function specifically so a consumer can detach cleanly — without
+ * calling these when a match is abandoned, an orphaned engine instance
+ * left mid-cascade (e.g. the user hits "Menu" while a chain reaction is
+ * still animating) would keep emitting `state_change`/`turn_change`/etc.
+ * into this same shared frontend state (`lastSnapshot`, the player strip,
+ * a *new* match's bot-turn logic...) indefinitely.
+ */
+let gameEventUnsubscribers = [];
+
+function unbindGameEvents() {
+  gameEventUnsubscribers.forEach(unsub => unsub());
+  gameEventUnsubscribers = [];
+}
+
 function bindGameEvents() {
-  game.on('state_change', snapshot => {
-    lastSnapshot = snapshot;
-    updatePlayerStrip(snapshot);
+  unbindGameEvents(); // guard against ever double-binding onto leftover listeners
 
-    // Play the crisp tech-click every time an orb settles safely
-    if (!snapshot.gameOver) {
-      try { SoundFX.playClick(); } catch (e) { /* ignore audio errors */ }
-    }
-  });
+  gameEventUnsubscribers.push(
+    game.on('state_change', snapshot => {
+      lastSnapshot = snapshot;
+      updatePlayerStrip(snapshot);
 
-  game.on('turn_change', async ({ currentPlayer }) => {
-    setActivePlayer(currentPlayer);
+      // Play the crisp tech-click every time an orb settles safely
+      if (!snapshot.gameOver) {
+        try { SoundFX.playClick(); } catch (e) { /* ignore audio errors */ }
+      }
+    }),
 
-    // The engine's last `state_change` snapshot still has `currentPlayer`
-    // set to whoever just moved — `_advanceTurn()` emits `turn_change`
-    // without a fresh snapshot. Patch it in immediately so the player
-    // strip's active-player highlight doesn't lag one move behind.
-    if (lastSnapshot) {
-      lastSnapshot = { ...lastSnapshot, currentPlayer };
-      updatePlayerStrip(lastSnapshot);
-    }
+    game.on('turn_change', async ({ currentPlayer }) => {
+      setActivePlayer(currentPlayer);
 
-    // ═══ AI LOGIC — Handle Multiple Bot Players ═══
-    // Check if the current player is a bot
-    const currentPlayerConfig = menuState.players[currentPlayer];
-    if (currentPlayerConfig && currentPlayerConfig.isBot && !game.isGameOver) {
-      // Block human inputs on the canvas while AI thinks
-      $gameCanvas.style.pointerEvents = 'none';
-
-      // Add a slight 600ms artificial delay so the bot feels natural, not instant
-      await new Promise(resolve => setTimeout(resolve, 600));
-
-      // Get the optimal coordinates from our heuristic script
-      const botMove = ChainReactionAI.getBestMove(game, currentPlayer, currentPlayerConfig.difficulty);
-
-      if (botMove) {
-        // Execute the automated click into the core engine — awaited so
-        // pointer events aren't restored until the bot's cascade (and any
-        // resulting turn_change for the *next* bot) has actually settled.
-        await game.handlePlayerClick(botMove.row, botMove.col);
+      // The engine's last `state_change` snapshot still has `currentPlayer`
+      // set to whoever just moved — `_advanceTurn()` emits `turn_change`
+      // without a fresh snapshot. Patch it in immediately so the player
+      // strip's active-player highlight doesn't lag one move behind.
+      if (lastSnapshot) {
+        lastSnapshot = { ...lastSnapshot, currentPlayer };
+        updatePlayerStrip(lastSnapshot);
       }
 
-      // Restore human touchscreen inputs once AI turn finishes
-      $gameCanvas.style.pointerEvents = 'auto';
-    }
-  });
+      await triggerBotTurnIfNeeded(currentPlayer, gameSessionId);
+    }),
 
-  game.on('explosion', ({ row, col, player }) => {
-    spawnExplosionFX(row, col, player);
+    game.on('explosion', ({ row, col, player }) => {
+      spawnExplosionFX(row, col, player);
 
-    // 1. Play the synthesized heavy explosion bass drop
-    try { SoundFX.playExplosion(); } catch (e) { /* ignore audio errors */ }
+      // 1. Play the synthesized heavy explosion bass drop
+      try { SoundFX.playExplosion(); } catch (e) { /* ignore audio errors */ }
 
-    // 2. Trigger physical mobile hardware vibration rumble (40ms pulse)
-    if (navigator.vibrate) {
-      try { navigator.vibrate(40); } catch (e) { /* ignore vibration errors */ }
-    }
-  });
+      // 2. Trigger physical mobile hardware vibration rumble (40ms pulse)
+      if (navigator.vibrate) {
+        try { navigator.vibrate(40); } catch (e) { /* ignore vibration errors */ }
+      }
+    }),
 
-  game.on('player_eliminated', ({ playerId }) => {
-    const p = menuState.players[playerId];
-    showToast(`${p?.name || `P${playerId}`} eliminated`, 'elim');
-  });
+    game.on('player_eliminated', ({ playerId }) => {
+      const p = menuState.players[playerId];
+      showToast(`${p?.name || `P${playerId}`} eliminated`, 'elim');
+    }),
 
-  game.on('game_over', ({ winner }) => {
-    // Play celebratory victory arpeggio
-    try { SoundFX.playVictory(); } catch (e) { /* ignore audio errors */ }
-    
-    setTimeout(() => showGameOver(winner), 400);
-  });
+    game.on('game_over', ({ winner }) => {
+      // Play celebratory victory arpeggio
+      try { SoundFX.playVictory(); } catch (e) { /* ignore audio errors */ }
 
-  game.on('error', ({ message }) => {
-    showToast(message, 'error');
-  });
+      setTimeout(() => showGameOver(winner), 400);
+    }),
 
-  game.on('cascade_capped', () => {
-    showToast('Cascade paused — resolving further next move', 'warn');
-  });
+    game.on('error', ({ message }) => {
+      showToast(message, 'error');
+    }),
+
+    game.on('cascade_capped', () => {
+      showToast('Cascade paused — resolving further next move', 'warn');
+    }),
+  );
 }
 
 /* ──────────────────────────────────────────
@@ -2031,8 +2095,11 @@ document.getElementById('btn-restart').addEventListener('click', () => {
   Object.keys(orbAnimations).forEach(k => delete orbAnimations[k]);
   $gameoverOverlay.classList.add('hidden');
   game.restart();
+  gameSessionId++; // invalidate any bot callback still "thinking" from before the restart
+  $gameCanvas.style.pointerEvents = 'auto'; // guard against a stale bot leaving this disabled
   lastSnapshot = game.getSnapshot();
   setActivePlayer(game.currentPlayer);
+  triggerBotTurnIfNeeded(game.currentPlayer, gameSessionId); // in case player 0 is bot-controlled
 });
 
 document.getElementById('btn-menu').addEventListener('click', () => {
@@ -2040,6 +2107,8 @@ document.getElementById('btn-menu').addEventListener('click', () => {
   showScreen('menu-screen');
   $playerAuraEl.style.opacity = '0';
   $gameoverOverlay.classList.add('hidden');
+  floatMuteInCorner();
+  unbindGameEvents(); // stop an abandoned match (possibly still mid-cascade) from touching frontend state
   game = null;
   lastSnapshot = null;
 });
@@ -2064,9 +2133,12 @@ document.getElementById('go-rematch').addEventListener('click', () => {
   Object.keys(orbAnimations).forEach(k => delete orbAnimations[k]);
   $gameoverOverlay.classList.add('hidden');
   game.restart();
+  gameSessionId++; // invalidate any bot callback still "thinking" from before the rematch
+  $gameCanvas.style.pointerEvents = 'auto'; // guard against a stale bot leaving this disabled
   lastSnapshot = game.getSnapshot();
   setActivePlayer(game.currentPlayer);
   updatePlayerStrip(lastSnapshot);
+  triggerBotTurnIfNeeded(game.currentPlayer, gameSessionId); // in case player 0 is bot-controlled
 });
 
 document.getElementById('go-menu').addEventListener('click', () => {
@@ -2074,6 +2146,8 @@ document.getElementById('go-menu').addEventListener('click', () => {
   showScreen('menu-screen');
   $playerAuraEl.style.opacity = '0';
   $gameoverOverlay.classList.add('hidden');
+  floatMuteInCorner();
+  unbindGameEvents(); // stop an abandoned match (possibly still mid-cascade) from touching frontend state
   game = null;
   lastSnapshot = null;
 });
@@ -2116,6 +2190,28 @@ function hexToRgba(hex, alpha = 1) {
 /* ──────────────────────────────────────────
    MUTE CONTROL
    ────────────────────────────────────────── */
+/**
+ * The mute button lives in exactly one DOM node, but needs two different
+ * homes: floating in the corner on the menu screen (nothing else occupies
+ * that spot there), and docked inline in the game HUD's own button row
+ * while in-game — NOT floating fixed in the same corner, because that
+ * corner is where the HUD's own Restart/Menu buttons sit, and a fixed
+ * element there would sit on top of and completely block them.
+ */
+function dockMuteInHud() {
+  const hudActions = document.querySelector('#hud .hud-actions');
+  if (!hudActions || $btnMute.parentElement === hudActions) return;
+  $btnMute.classList.remove('corner-btn');
+  $btnMute.classList.add('hud-btn');
+  hudActions.insertBefore($btnMute, hudActions.firstChild);
+}
+function floatMuteInCorner() {
+  if ($btnMute.parentElement === document.body) return;
+  $btnMute.classList.remove('hud-btn');
+  $btnMute.classList.add('corner-btn');
+  document.body.appendChild($btnMute);
+}
+
 function refreshMuteIcon() {
   $btnMute.textContent = SoundFX.muted ? '🔇' : '🔊';
   $btnMute.classList.toggle('is-muted', SoundFX.muted);

@@ -1,0 +1,23 @@
+# Dependencies (this project has none by design, but ignore in case a
+# dev dependency is ever added — e.g. a local static server)
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Local scratch / temp
+*.tmp
+.tmp/

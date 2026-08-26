@@ -269,6 +269,13 @@ class ChainReactionAI {
   }
 }
 
-if (typeof module !== 'undefined') {
+// Supports both CommonJS (Node / tests) and browser globals — mirrors the
+// export pattern in ChainReactionEngine.js. Without the `window` branch,
+// `ChainReactionAI` was only reachable in the browser via the shared
+// top-level script scope (which is why it happened to work from
+// index.html's inline script), not as a properly exposed global.
+if (typeof module !== 'undefined' && module.exports) {
   module.exports = { ChainReactionAI };
+} else if (typeof window !== 'undefined') {
+  window.ChainReactionAI = ChainReactionAI;
 }
