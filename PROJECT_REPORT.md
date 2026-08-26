@@ -104,8 +104,9 @@ The AI module takes a `ChainReactionGame` instance and a player id, reads a snap
 | Styling | Hand-written CSS (custom properties, `backdrop-filter`, `:has()`, flexbox) |
 | Audio | Web Audio API, oscillators/gain nodes only — no audio files |
 | Fonts | Google Fonts CDN (`Orbitron`, `Share Tech Mono`, `Rajdhani`) — the only external resource |
-| Testing | Node.js built-ins; hand-rolled `assert`/`section` helpers (no Jest/Mocha/etc.) |
-| Verification | Playwright (dev-time only, not shipped) used to drive real headless-browser sessions during development |
+| Testing (unit) | Node.js built-ins; hand-rolled `assert`/`section` helpers (no Jest/Mocha/etc.) |
+| Testing (e2e) | Playwright — the project's one dev-only dependency, driving a real headless Chromium against `index.html`; not shipped, not required to play the game |
+| CI | GitHub Actions (`.github/workflows/ci.yml`) — runs the unit suites (no install) and the e2e suite (with Playwright installed) on every push |
 
 ## 6. Module Reference
 
@@ -115,14 +116,166 @@ turn order, elimination/win detection, and the async wave-based cascade resolver
 cell is derived from position (corner → 2, edge → 3, interior → 4). Config validation
 (`_validateConfig`) rejects malformed grid/player/cascade-cap values with a `RangeError`.
 
-### 6.2 `src/ChainReactionAI.js` (~274 lines)
-Exports `ChainReactionAI` with a single static entry point, `getBestMove(gameInstance, aiPlayerId,
-difficulty)`. For every legal move it runs `_simulateMove` — a pure, disposable re-implementation
-of the cascade rules over a cloned plain-object grid, capped at 200 simulated waves purely for
-performance — then scores the result via `_evaluate`/`_scoreFeatures` (orb differential, cell
-control, corner value, opponent threat exposure, eliminations, an outright-win bonus) and selects
-a move via `_pickByDifficulty`, whose weighting/randomness profile differs by difficulty
-(`DIFFICULTIES.easy|medium|hard`).
+### 6.2 `src/ChainReactionAI.js` (~274 lines) — AI Design Deep Dive
+
+Exports `ChainReactionAI` with a single static entry point:
+
+```
+ChainReactionAI.getBestMove(gameInstance, aiPlayerId, difficulty = 'medium')
+  → { row, col }  or  null (no legal move)
+```
+
+**Algorithm class.** This is a **single-ply, simulate-and-score heuristic evaluator** — not a
+game-tree search. It never looks at what an opponent might do in reply; it only asks "if I play
+this move and let the resulting chain reaction fully resolve, how good does the board look
+afterward?" for every legal move, then picks one. This keeps it O(legal moves × board size ×
+simulated waves) per turn — small enough to stay well under a millisecond to a few milliseconds
+even on a 12×12 board (measured) — while still being materially stronger than a fixed rule list,
+because it "sees" the actual cascade a move triggers instead of guessing at it.
+
+The algorithm runs in four stages every time a bot is asked to move:
+
+**Stage 1 — Legal move generation.** A move `(r, c)` is legal iff the cell is empty or already
+owned by the AI player. Formally, for a board with `rows × cols` cells:
+
+```
+M = { (r, c) : owner(r, c) = EMPTY  or  owner(r, c) = aiPlayerId }
+```
+
+If `M` is empty (can't happen in a game the AI hasn't already lost, but handled defensively),
+`getBestMove` returns `null`.
+
+**Stage 2 — Move simulation (`_simulateMove`).** For every candidate `m = (r, c) ∈ M`, the board is
+cloned (plain objects, not live `Cell` instances — this is a disposable copy the AI is free to
+mutate), one orb is placed for the AI at `(r, c)`, and the cascade is resolved to a fixed point by
+re-running the *same* wave-based rule the engine itself uses (§6.1), independently re-implemented
+here so the AI never touches or depends on the live game:
+
+```
+place one orb at (r, c), owned by aiPlayerId
+
+repeat, up to 200 times (SIMULATION_WAVE_CAP — a performance cap, unrelated to
+                          the engine's own much larger maxCascadeWaves safety cap):
+    wave = { every cell (r', c') where orbCount(r', c') ≥ capacity(r', c') }
+    if wave is empty: stop — the board has settled
+    for each cell in wave:
+        orbCount -= capacity          # the exploding cell empties out
+        if orbCount ≤ 0: orbCount = 0, owner = EMPTY
+        for each of its ≤4 orthogonal neighbours:
+            queue: neighbour.orbCount += 1, neighbour.owner = aiPlayerId
+    apply every queued increment simultaneously
+    wavesTriggered += 1
+```
+
+This produces a resulting board `B(m)` and a wave count `W(m)` — the length of the chain reaction
+that move would trigger.
+
+**Stage 3 — Feature extraction (`_evaluate`).** Six numbers are computed from `B(m)`:
+
+| Feature | Formula | Meaning |
+|---|---|---|
+| `orbDelta` | `Σ orbCount(cell)` over AI-owned cells `−` `Σ orbCount(cell)` over all opponent-owned cells | net material advantage |
+| `cellControl` | count of cells where `owner(cell) = aiPlayerId` | how much board territory the AI holds |
+| `corner` | count of AI-owned cells where `(r=0 ∨ r=rows−1) ∧ (c=0 ∨ c=cols−1)` | corners cost only 2 orbs to defend — cheap, stable territory |
+| `threat` | count of opponent-owned cells with `orbCount ≥ capacity − 1` (one orb from exploding) that have **at least one orthogonal neighbour owned by the AI** | opponent cells primed to flip AI territory on their next turn |
+| `eliminatedCount` | number of players who were active before this move and now have zero orbs on `B(m)` | opponents this move would knock out |
+| `isWin` | `true` iff more than one player was active before the move **and** exactly one owner remains on `B(m)`, **and** it's the AI | this move ends the game in the AI's favour |
+
+**Stage 4 — Scoring (`_scoreFeatures`).** The six features are combined into a single scalar via a
+weighted linear sum, plus an overriding bonus for an outright win:
+
+```
+score(m) =   w_orbDelta      · orbDelta(m)
+           + w_cellControl   · cellControl(m)
+           + w_corner        · corner(m)
+           − w_threat        · threat(m)
+           + w_eliminate     · eliminatedCount(m)
+           + w_chain         · W(m)
+           + (100000 if isWin(m) else 0)
+```
+
+The weight vector `(w_orbDelta, w_cellControl, w_corner, w_threat, w_eliminate, w_chain)` is what
+actually differs per difficulty — this is the entire mechanism by which Easy/Medium/Hard play
+differently, not three different algorithms:
+
+| Weight | Easy | Medium | Hard | Effect of a higher value |
+|---|---|---|---|---|
+| `w_orbDelta` | 1.0 | 1.4 | 1.8 | cares more about raw material advantage |
+| `w_cellControl` | 0.4 | 0.8 | 1.1 | cares more about holding territory, not just orbs |
+| `w_corner` | 0.5 | 0.9 | 1.1 | values cheap-to-defend corners more highly |
+| `w_threat` | **0.0** | 0.6 | 1.4 | penalizes moves that leave the AI exposed to a counter-chain |
+| `w_eliminate` | 3.0 | 6.0 | 9.0 | prioritizes moves that knock a player out |
+| `w_chain` | 0.1 | 0.3 | 0.5 | rewards triggering a longer cascade |
+| randomness `ρ` | 0.75 | 0.25 | 0.05 | how often it ignores the ranking (see Stage 5) |
+| pool fraction `τ` | 0.6 | 0.3 | 0.08 | how wide a "not terrible" pool it picks from when it does |
+
+Two things are visible directly in this table: Easy is defensively blind (`w_threat = 0` — it
+never plays around a counter-chain) and picks against the ranking most of the time (`ρ = 0.75`);
+Hard weighs every feature more heavily and almost always takes its top-ranked move (`ρ = 0.05`).
+
+**Stage 5 — Move selection (`_pickByDifficulty`).**
+
+```
+if any move m has isWin(m) = true:
+    return that move                      # always — regardless of difficulty
+
+rank all legal moves by score(m), descending
+
+draw u ~ Uniform(0, 1)
+if u < ρ:
+    k = max(1, round(τ × |M|))
+    return a uniformly random move from the top k ranked moves
+else:
+    return a uniformly random move among those tied for the single highest score
+```
+
+A winning move is taken unconditionally at every difficulty — even Easy will always close out a
+win it can see, so bots never "forget" to finish a game. Below that, difficulty is entirely a
+matter of *how much the ranking is trusted*: Hard picks its actual best move 95% of the time from
+a nearly-greedy pool; Easy substitutes a wide random pool 75% of the time, which is what makes it
+a genuinely weaker, exploitable opponent rather than the same brain playing slower.
+
+**Worked micro-example.** Suppose, on a 5×5 board, the AI (player 1) is considering two candidate
+moves late in a Medium-difficulty game:
+- Move A leaves it with `orbDelta = 3`, `cellControl = 6`, `corner = 1`, `threat = 1`, `eliminatedCount = 0`, triggers `W = 2` waves, no win.
+- Move B leaves it with `orbDelta = 5`, `cellControl = 5`, `corner = 0`, `threat = 3`, `eliminatedCount = 0`, triggers `W = 4` waves, no win.
+
+Using the Medium weights `(1.4, 0.8, 0.9, 0.6, 6, 0.3)`:
+
+```
+score(A) = 1.4(3) + 0.8(6) + 0.9(1) − 0.6(1) + 6(0) + 0.3(2)
+         = 4.2 + 4.8 + 0.9 − 0.6 + 0 + 0.6 = 9.9
+
+score(B) = 1.4(5) + 0.8(5) + 0.9(0) − 0.6(3) + 6(0) + 0.3(4)
+         = 7.0 + 4.0 + 0.0 − 1.8 + 0 + 1.2 = 10.4
+```
+
+Move B scores higher — more material and a longer chain outweigh giving up the corner and leaving
+three opponent cells primed to counter-chain into the AI's territory. Recomputing the *identical*
+two positions with the Hard weights `(1.8, 1.1, 1.1, 1.4, 9, 0.5)`:
+
+```
+score(A) = 1.8(3) + 1.1(6) + 1.1(1) − 1.4(1) + 9(0) + 0.5(2)
+         = 5.4 + 6.6 + 1.1 − 1.4 + 0 + 1.0 = 12.7
+
+score(B) = 1.8(5) + 1.1(5) + 1.1(0) − 1.4(3) + 9(0) + 0.5(4)
+         = 9.0 + 5.5 + 0.0 − 4.2 + 0 + 2.0 = 12.3
+```
+
+The ranking flips: Move A now wins, 12.7 to 12.3. Hard's much heavier `w_threat` (1.4 vs. 0.6)
+outweighs Move B's material and chain-length advantage once those three primed opponent cells are
+penalized more severely — a concrete illustration of why Hard plays more defensively than Medium
+for the *identical* board position, purely from the weight table, with no branching logic
+difference between difficulties anywhere in the code.
+
+**Why this design, not a deeper search.** A full minimax/expectimax over multiple plies was
+considered and rejected for this project: Chain Reaction's branching factor and cascade depth make
+even a 2-ply search meaningfully more expensive, and — because a single move can flip a large
+fraction of the board — the value of looking further ahead is dominated by how well the *immediate*
+consequence of a move is evaluated. Investing that complexity budget into a richer single-ply
+evaluator (six features instead of one or two, real cascade simulation instead of a static formula)
+was judged the better trade-off for a bot that has to respond in well under its own 600ms "thinking"
+delay on boards up to 12×12.
 
 ### 6.3 `index.html` (~2250 lines)
 Single-file frontend: CSS theme (`:root` custom properties for the neon/glass palette), three
@@ -159,28 +312,37 @@ them were visible from static code review alone.
 ## 8. Testing
 
 ### 8.1 Strategy
-Two layers were used:
+Two layers are used:
 1. **Unit-style assertions** against the headless engine and AI, run under plain Node.js
-   (`npm test`). These cover construction/validation, capacity math, placement, invalid-move
-   rejection, single and chained explosions, ownership transfer, turn rotation, the first-round
-   elimination guard, snapshot shape, restart, a full small-board game to a win, mid-cascade input
-   blocking, neighbor calculation, the cascade safety cap, and the public state getters — plus AI
-   legality, win-taking behavior, and no-legal-move handling.
-2. **End-to-end verification** using a headless Playwright browser session against the actual
-   `index.html` during development — exercising real user flows (menu configuration, starting a
-   match, human + bot turns, mute toggling, panel open/close, operative add/remove/toggle) and
-   checking for console/page errors. This is how bugs 4–6 in §7 were actually caught; static
-   review alone did not surface them.
+   (`npm test`, no install required). These cover construction/validation, capacity math,
+   placement, invalid-move rejection, single and chained explosions, ownership transfer, turn
+   rotation, the first-round elimination guard, snapshot shape, restart, a full small-board game to
+   a win, mid-cascade input blocking, neighbor calculation, the cascade safety cap, and the public
+   state getters — plus AI legality, win-taking behavior, and no-legal-move handling.
+2. **A checked-in browser end-to-end suite** (`tests/e2e/game.e2e.test.js`, `npm run test:e2e`)
+   using Playwright to drive a real headless Chromium against the actual `index.html`. This tier
+   exists specifically because bugs 4–9 in §7 were *only* ever found by driving the real app —
+   layout/CSS-stacking bugs and click-timing race conditions are invisible to a DOM-less unit test
+   by construction. What started as throwaway verification scripts during review sessions has been
+   turned into permanent, repeatable regression tests: each of bugs 7, 8, and 9 has a named test
+   section that would fail immediately if that exact bug ever came back. This is the one place the
+   project isn't zero-dependency (Playwright is a dev-only dependency — see README "Running the
+   Tests"), a deliberate trade-off given what this tier has actually caught in practice.
+
+CI (`.github/workflows/ci.yml`) runs both tiers on every push — the unit suites in a plain Node job
+with no setup, the e2e suite in a second job that installs Playwright first.
 
 ### 8.2 Results (at time of writing)
 
 ```
-ChainReactionEngine.test.js:  88 passed, 0 failed
-ChainReactionAI.test.js:      10 passed, 0 failed
-Total:                        98 assertions, 0 failures
+ChainReactionEngine.test.js:   88 passed, 0 failed
+ChainReactionAI.test.js:       10 passed, 0 failed
+tests/e2e/game.e2e.test.js:    28 passed, 0 failed
+Total:                        126 assertions, 0 failures
 ```
 
-Run with `npm test`, or each suite individually via `npm run test:engine` / `npm run test:ai`.
+Run with `npm test` (unit only, no install) or `npm run test:all` (everything, requires
+`npm install` first) — see README for the individual `test:engine` / `test:ai` / `test:e2e` scripts.
 
 ## 9. Design Decisions Worth Noting
 
@@ -214,11 +376,16 @@ Chain Reaction/
 │   └── ChainReactionAI.js         # Bot move selection (weighted heuristic, difficulty tiers)
 ├── tests/
 │   ├── ChainReactionEngine.test.js
-│   └── ChainReactionAI.test.js
+│   ├── ChainReactionAI.test.js
+│   └── e2e/
+│       └── game.e2e.test.js       # Browser e2e suite (Playwright, dev-only dependency)
 ├── docs/
 │   └── REQUIREMENTS.md            # Functional / non-functional requirements
+├── .github/
+│   └── workflows/ci.yml           # Runs the full test suite on every push
 ├── PROJECT_REPORT.md              # This file
 ├── package.json
+├── package-lock.json              # Committed — pins the one dev dependency (Playwright) for CI
 ├── LICENSE                        # MIT
 ├── .gitignore
 └── README.md
@@ -255,7 +422,12 @@ package files.
 
 ## 13. Future Work
 
-Candidate next steps identified during review (not yet implemented):
+**Delivered since first identified:** a checked-in browser e2e suite (§8.1) and a CI workflow
+running the full test suite on every push (§5, §10) — both were flagged as gaps in an earlier
+review pass and have since been implemented, directly in response to the frontend regressions in
+§7 that no prior test tier could have caught.
+
+Candidate next steps still open:
 
 - **Feel/juice**: combo callout on multi-wave cascades, an expanding shockwave ring per explosion,
   cascade-scaled screen shake.
@@ -266,9 +438,11 @@ Candidate next steps identified during review (not yet implemented):
 - **Audio**: cascade-scaled explosion sound layering, a rising "charge" tone on near-critical cells.
 - **Payoff**: a post-match "mission debrief" stats panel (biggest chain, total explosions, cells
   captured), a board-flood visual beat on victory.
-- Broader accessibility (keyboard-navigable board), persisted match statistics, and a lightweight
-  CI workflow to run `npm test` on push are also reasonable additions beyond the visual/audio list
-  above.
+- Broader accessibility (keyboard-navigable board) and persisted match statistics remain reasonable
+  additions beyond the visual/audio list above.
+- The frontend's single-file structure (§9, §12-adjacent) still isn't split by concern; not urgent,
+  but worth revisiting before adding much more UI surface — the HUD/mute-button collision in §7
+  (bug #8) was exactly the kind of issue that a lack of structural boundaries invites.
 
 ## 14. Conclusion
 
@@ -277,4 +451,6 @@ dependencies, a genuinely headless/testable rules engine, a non-trivial tiered A
 cohesive custom visual/audio theme. Its test suite and the development history in §7 and §11
 reflect an iterative process where real end-to-end verification — not just static review — caught
 issues that mattered to actual usability, which then fed back into concrete UI redesigns rather
-than superficial patches.
+than superficial patches. That verification process is no longer ad hoc: it's now a permanent,
+CI-enforced part of the project (§8, §13), so the same class of bug it caught nine times over the
+course of development gets caught automatically the tenth time.

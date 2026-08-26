@@ -1,8 +1,14 @@
-# Dependencies (this project has none by design, but ignore in case a
-# dev dependency is ever added — e.g. a local static server)
+# Dependencies. The game itself still ships with zero runtime dependencies —
+# node_modules/ here is dev-only tooling (Playwright, for the e2e test suite
+# in tests/e2e/). package-lock.json IS committed (not ignored) so CI and
+# every contributor install the exact same versions.
 node_modules/
-package-lock.json
 npm-debug.log*
+
+# Playwright
+test-results/
+playwright-report/
+tests/e2e/*.png
 
 # OS files
 .DS_Store

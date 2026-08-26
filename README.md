@@ -1,5 +1,7 @@
 # Chain Reaction — Nexus Protocol
 
+[![Tests](https://github.com/tahmidnafees619/ChainReaction/actions/workflows/ci.yml/badge.svg)](https://github.com/tahmidnafees619/ChainReaction/actions/workflows/ci.yml)
+
 A browser-based, pass-and-play implementation of the classic **Chain Reaction** strategy game — 2 to 10 players (any mix of humans and AI bots), a configurable grid, and a cyberpunk-themed frontend. Pure vanilla JavaScript and HTML5 Canvas, **zero runtime dependencies**.
 
 > Place orbs, push cells past their critical mass, and trigger cascading chain reactions to capture the entire board and eliminate every other operative.
@@ -13,7 +15,9 @@ A browser-based, pass-and-play implementation of the classic **Chain Reaction** 
 - Procedurally synthesized audio (Web Audio API) — no audio assets — with a global mute toggle that persists across sessions
 - Cascade safety cap — chain reactions are guaranteed to terminate even in pathological board states
 - In-app "How to Play" reference panel
-- 98 hand-rolled test assertions across the engine and AI (no test framework dependency)
+- 98 hand-rolled test assertions across the engine and AI, plus a 28-assertion browser end-to-end
+  suite covering real layout/click/session behavior a unit test can't see (see Testing below)
+- CI (GitHub Actions) runs the full test suite on every push
 
 ## Getting Started
 
@@ -30,12 +34,28 @@ npx http-server .
 
 ## Running the Tests
 
+There are two tiers, deliberately kept separate:
+
 ```bash
-npm test              # runs both suites
+npm test              # engine + AI — no install required, plain Node.js built-ins
 npm run test:engine   # engine-only
 npm run test:ai       # AI-only
 ```
-No install step is required — the test files use only Node.js built-ins (`require`, `assert`-style helpers written in-repo).
+
+```bash
+npm install                          # one-time, pulls in Playwright (dev-only — see below)
+npx playwright install chromium      # one-time, downloads a headless Chromium build
+npm run test:e2e                     # drives the real page in that browser
+npm run test:all                     # engine + AI + e2e, in order
+```
+
+`npm test` (the engine/AI suites) needs nothing installed — same as always. The e2e suite is the
+one part of this project that isn't zero-dependency: it uses [Playwright](https://playwright.dev/)
+as a **dev-only** dependency to drive a real headless browser against `index.html`, because several
+real bugs in this project (a CSS stacking bug hiding a button under another one, a race condition
+only reachable through actual click timing) were only ever findable that way — not from reading the
+code or from a DOM-less unit test. It does not affect the shipped game: `index.html` itself still
+has zero runtime dependencies, and playing it needs no install at all.
 
 ## How to Play
 
@@ -57,9 +77,12 @@ Chain Reaction/
 │   └── ChainReactionAI.js         # Bot move selection (weighted heuristic, difficulty tiers)
 ├── tests/
 │   ├── ChainReactionEngine.test.js
-│   └── ChainReactionAI.test.js
+│   ├── ChainReactionAI.test.js
+│   └── e2e/
+│       └── game.e2e.test.js       # Browser end-to-end suite (Playwright, dev-only dependency)
 ├── docs/
 │   └── REQUIREMENTS.md            # Functional / non-functional requirements
+├── .github/workflows/ci.yml       # Runs the full test suite on every push
 ├── PROJECT_REPORT.md              # Full project report (architecture, design decisions, testing, etc.)
 ├── package.json
 ├── LICENSE
@@ -79,8 +102,9 @@ See `PROJECT_REPORT.md` for the full design rationale, including bugs found and 
 - Vanilla JavaScript (ES2020+), no framework, no bundler
 - HTML5 Canvas 2D for rendering
 - Web Audio API for procedural sound
-- Google Fonts (Orbitron / Share Tech Mono / Rajdhani) via CDN `<link>` — the only external resource in the project
-- Node.js (built-ins only) to run the test suites
+- Google Fonts (Orbitron / Share Tech Mono / Rajdhani) via CDN `<link>` — the only external resource the game itself loads
+- Node.js (built-ins only) to run the engine/AI test suites
+- [Playwright](https://playwright.dev/) (dev-only) to run the browser e2e suite; GitHub Actions runs everything on every push
 
 ## License
 

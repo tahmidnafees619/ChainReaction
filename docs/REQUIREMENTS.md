@@ -10,9 +10,10 @@ browser game. It covers the headless game engine, the AI opponent, and the front
 | Requirement | Detail |
 |---|---|
 | Runtime (play) | Any modern browser with Canvas 2D, Web Audio API, and CSS `backdrop-filter` support (Chrome, Edge, Firefox, Safari — recent versions) |
-| Runtime (tests) | Node.js ≥ 14 (built-ins only — no packages to install) |
+| Runtime (unit tests) | Node.js ≥ 14 (built-ins only — `npm test`, no packages to install) |
+| Runtime (e2e tests) | Node.js ≥ 14 + Playwright (`npm install` + `npx playwright install chromium`, then `npm run test:e2e`) — the one dev-only dependency in the project, not required to play |
 | Build step | None. Static HTML/CSS/JS, no bundler or transpiler |
-| External dependencies | One CDN font stylesheet (Google Fonts). No JS libraries, no package installs |
+| External dependencies (game) | One CDN font stylesheet (Google Fonts). No JS libraries, no package installs |
 | Persistence | `localStorage` only, for the mute preference (`cr_muted`) |
 
 ## 3. Functional Requirements
@@ -52,7 +53,9 @@ browser game. It covers the headless game engine, the AI opponent, and the front
 
 ## 4. Non-Functional Requirements
 
-- **NFR-1 (Zero dependencies)**: The project shall not require an npm install, bundler, or external JS library to run.
+- **NFR-1 (Zero runtime dependencies)**: Playing the game shall never require an npm install,
+  bundler, or external JS library. (The optional browser e2e test suite is the sole exception,
+  and is dev-only tooling — it is not part of, and is never loaded by, the shipped game.)
 - **NFR-2 (Determinism/testability)**: Core game rules shall be implemented in a DOM-free module so they can be unit-tested under Node.js without a browser.
 - **NFR-3 (Performance)**: AI move selection shall complete in well under the bot's artificial "thinking" delay (600 ms) on boards up to 12×12.
 - **NFR-4 (Responsiveness)**: The layout shall adapt to both desktop and mobile viewport sizes; touch targets (buttons, operative controls) shall be large enough to tap reliably — no control shall depend on `:hover` to become usable.
