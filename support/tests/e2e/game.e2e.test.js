@@ -1,10 +1,10 @@
 /**
  * CHAIN REACTION — BROWSER (E2E) TEST SUITE
- * Run with:  node tests/e2e/game.e2e.test.js   (or: npm run test:e2e)
+ * Run with:  node support/tests/e2e/game.e2e.test.js   (or: npm run test:e2e)
  *
  * Requires Playwright (`npm install` first — this is the one part of the
  * project that isn't zero-dependency; see README). Drives the actual
- * index.html in a real headless Chromium instance, the same way
+ * main.html in a real headless Chromium instance, the same way
  * ChainReactionEngine.test.js / ChainReactionAI.test.js drive the engine
  * directly under Node — except here nothing about the frontend is
  * reachable any other way: layout, CSS stacking, and event-wiring bugs
@@ -14,7 +14,7 @@
  * Every scenario in this file is a regression test for a bug that was
  * actually found by manual end-to-end testing and would NOT have been
  * caught by the engine/AI unit suites alone — see PROJECT_REPORT.md §7
- * (bugs #1, #2, #3 map directly to the sections below).
+ * (bugs #7, #8, #9 map directly to the sections below).
  */
 
 'use strict';
@@ -22,7 +22,7 @@
 const path = require('path');
 const { chromium } = require('playwright');
 
-const INDEX_HTML = 'file:///' + path.resolve(__dirname, '../../index.html').replace(/\\/g, '/');
+const MAIN_HTML = 'file:///' + path.resolve(__dirname, '../../../main.html').replace(/\\/g, '/');
 
 let passed = 0;
 let failed = 0;
@@ -84,7 +84,7 @@ async function run() {
   section('Fresh Load');
   {
     const { page, errors } = await newPage(browser);
-    await page.goto(INDEX_HTML);
+    await page.goto(MAIN_HTML);
     await page.waitForSelector('#operatives-list');
     assert(errors.length === 0, `menu loads with zero console/page errors (got ${errors.length})`);
 
@@ -103,7 +103,7 @@ async function run() {
   section('Bot-First-Player Regression (bug #7)');
   {
     const { page, errors } = await newPage(browser);
-    await page.goto(INDEX_HTML);
+    await page.goto(MAIN_HTML);
     await page.waitForSelector('#operatives-list');
     await setGridSize(page, 3, 3);
     await setOperative(page, 0, { bot: true, difficulty: 'hard' });
@@ -114,7 +114,7 @@ async function run() {
 
     // If bug #7 regressed, the board stays completely empty forever.
     // NOTE: `game` is a page-level `let`, not `window.game` — it's reached
-    // here the same way index.html's own inline script reaches it, via the
+    // here the same way main.html's own inline script reaches it, via the
     // shared top-level script scope (see PROJECT_REPORT.md §7 bug notes on
     // ChainReactionAI's export for the same distinction).
     const progressed = await page.waitForFunction(() => {
@@ -136,7 +136,7 @@ async function run() {
   for (const width of [1000, 480, 375]) {
     const { page } = await newPage(browser);
     await page.setViewportSize({ width, height: 800 });
-    await page.goto(INDEX_HTML);
+    await page.goto(MAIN_HTML);
     await page.waitForSelector('#operatives-list');
     await page.click('#start-btn');
     await page.waitForSelector('#game-screen:not(.hidden)');
@@ -158,7 +158,7 @@ async function run() {
   section('Rapid Start/Bail Stress (bug #9)');
   {
     const { page, errors } = await newPage(browser);
-    await page.goto(INDEX_HTML);
+    await page.goto(MAIN_HTML);
     await page.waitForSelector('#operatives-list');
     await setGridSize(page, 5, 5);
     await setOperative(page, 0, { bot: true, difficulty: 'hard' });
@@ -184,7 +184,7 @@ async function run() {
   section('Full Game → Rematch → Menu');
   {
     const { page, errors } = await newPage(browser);
-    await page.goto(INDEX_HTML);
+    await page.goto(MAIN_HTML);
     await page.waitForSelector('#operatives-list');
     await setGridSize(page, 3, 3);
     await setOperative(page, 0, { bot: true, difficulty: 'hard' });
@@ -222,7 +222,7 @@ async function run() {
   section('Operatives Panel');
   {
     const { page, errors } = await newPage(browser);
-    await page.goto(INDEX_HTML);
+    await page.goto(MAIN_HTML);
     await page.waitForSelector('#operatives-list');
 
     const initialCount = (await page.$$('.op-row')).length;
@@ -273,7 +273,7 @@ async function run() {
   section('Mute Persistence');
   {
     const { page, errors } = await newPage(browser);
-    await page.goto(INDEX_HTML);
+    await page.goto(MAIN_HTML);
     await page.waitForSelector('#btn-mute');
 
     const before = await page.textContent('#btn-mute');
@@ -300,7 +300,7 @@ async function run() {
   section('How to Play Panel');
   {
     const { page, errors } = await newPage(browser);
-    await page.goto(INDEX_HTML);
+    await page.goto(MAIN_HTML);
     await page.waitForSelector('#btn-howto');
 
     await page.click('#btn-howto');

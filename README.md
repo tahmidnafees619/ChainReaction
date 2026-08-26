@@ -10,7 +10,7 @@ A browser-based, pass-and-play implementation of the classic **Chain Reaction** 
 
 - **2–10 players**, any mix of human and AI, on a configurable grid (3×3 up to 12×12)
 - **Three AI difficulty tiers** (Easy / Medium / Hard) — a weighted-heuristic bot that simulates each candidate move's cascade outcome and scores it on board control, corner value, and threat exposure, rather than a fixed rule list
-- **Headless game engine** (`src/ChainReactionEngine.js`) — pure data/logic, zero DOM dependency, driven entirely by an event system (`on`/`emit`), so any frontend could be built against it
+- **Headless game engine** (`support/src/ChainReactionEngine.js`) — pure data/logic, zero DOM dependency, driven entirely by an event system (`on`/`emit`), so any frontend could be built against it
 - Animated canvas rendering — orbiting "fluid sphere" orbs, particle burst effects on explosion, hazard vibration + pulsing aura on near-critical cells, 3D-tilted arena
 - Procedurally synthesized audio (Web Audio API) — no audio assets — with a global mute toggle that persists across sessions
 - Cascade safety cap — chain reactions are guaranteed to terminate even in pathological board states
@@ -24,12 +24,12 @@ A browser-based, pass-and-play implementation of the classic **Chain Reaction** 
 This project has no build step and no npm dependencies — it's a static page.
 
 **Option 1 — just open it:**
-Open `index.html` directly in a modern browser (Chrome, Edge, or Firefox recommended for full Web Audio / backdrop-filter support).
+Open `main.html` directly in a modern browser (Chrome, Edge, or Firefox recommended for full Web Audio / backdrop-filter support).
 
 **Option 2 — serve it locally** (recommended if your browser restricts `file://` access to scripts):
 ```bash
 npx http-server .
-# then visit the printed local URL
+# then visit the printed local URL and open main.html
 ```
 
 ## Running the Tests
@@ -51,11 +51,14 @@ npm run test:all                     # engine + AI + e2e, in order
 
 `npm test` (the engine/AI suites) needs nothing installed — same as always. The e2e suite is the
 one part of this project that isn't zero-dependency: it uses [Playwright](https://playwright.dev/)
-as a **dev-only** dependency to drive a real headless browser against `index.html`, because several
+as a **dev-only** dependency to drive a real headless browser against `main.html`, because several
 real bugs in this project (a CSS stacking bug hiding a button under another one, a race condition
 only reachable through actual click timing) were only ever findable that way — not from reading the
-code or from a DOM-less unit test. It does not affect the shipped game: `index.html` itself still
+code or from a DOM-less unit test. It does not affect the shipped game: `main.html` itself still
 has zero runtime dependencies, and playing it needs no install at all.
+
+See `requirements.txt` for the full dependency picture (there is no Python in this project; that
+file exists to document this clearly and point to `package.json`, the real manifest).
 
 ## How to Play
 
@@ -71,19 +74,30 @@ The same rules are summarized in-app via the "❓ How to Play" panel on the menu
 
 ```
 Chain Reaction/
-├── index.html                     # Entry point — UI, canvas renderer, audio, all frontend logic
-├── src/
-│   ├── ChainReactionEngine.js     # Headless game engine (rules, state, event system)
-│   └── ChainReactionAI.js         # Bot move selection (weighted heuristic, difficulty tiers)
-├── tests/
-│   ├── ChainReactionEngine.test.js
-│   ├── ChainReactionAI.test.js
-│   └── e2e/
-│       └── game.e2e.test.js       # Browser end-to-end suite (Playwright, dev-only dependency)
-├── docs/
-│   └── REQUIREMENTS.md            # Functional / non-functional requirements
-├── .github/workflows/ci.yml       # Runs the full test suite on every push
-├── PROJECT_REPORT.md              # Full project report (architecture, design decisions, testing, etc.)
+├── main.html                      # Entry point — open this to play. UI, canvas renderer, audio,
+│                                     all frontend logic
+├── requirements.txt                # Dependency manifest (this is a JS project, not Python — see file)
+├── data/                           # No datasets are used by this project — see data/README.md
+├── support/
+│   ├── src/
+│   │   ├── ChainReactionEngine.js # Headless game engine (rules, state, event system)
+│   │   └── ChainReactionAI.js     # Bot move selection (weighted heuristic, difficulty tiers)
+│   ├── tests/
+│   │   ├── ChainReactionEngine.test.js
+│   │   ├── ChainReactionAI.test.js
+│   │   └── e2e/
+│   │       └── game.e2e.test.js   # Browser end-to-end suite (Playwright, dev-only dependency)
+│   ├── docs/
+│   │   └── REQUIREMENTS.md        # Functional / non-functional requirements
+│   └── reports/                   # Editable HTML/CSS source for others/*_report.pdf
+│       ├── final_report.html
+│       ├── update_report.html
+│       ├── ieee_style.css
+│       └── render.js              # npm run reports:build regenerates the PDFs
+├── others/                         # Presentations, PDF reports, demo video (see others/README.md)
+├── .github/workflows/ci.yml        # Runs the full test suite on every push
+├── PROJECT_REPORT.md               # Full technical project report (architecture, design decisions,
+│                                     testing, etc.) — a superset of the formal reports in others/
 ├── package.json
 ├── LICENSE
 └── README.md
@@ -93,9 +107,10 @@ Chain Reaction/
 
 - **`ChainReactionEngine.js`** owns all game state and rules. It never touches the DOM — a frontend subscribes to its events (`state_change`, `explosion`, `turn_change`, `player_eliminated`, `game_over`, `error`, `cascade_capped`) and calls `handlePlayerClick(row, col)` on input. Full event contract is documented at the top of the file.
 - **`ChainReactionAI.js`** is a pure function of a game snapshot: for every legal move it simulates the resulting cascade on a disposable clone of the grid, scores the outcome, and picks a move according to the chosen difficulty's weighting/randomness profile. It never mutates the live game.
-- **`index.html`** owns everything visual: screen management (menu / game / game-over), the canvas renderer, the particle system, procedural audio, and DOM wiring between user input and the engine's public API.
+- **`main.html`** owns everything visual: screen management (menu / game / game-over), the canvas renderer, the particle system, procedural audio, and DOM wiring between user input and the engine's public API.
 
-See `PROJECT_REPORT.md` for the full design rationale, including bugs found and fixed along the way.
+See `PROJECT_REPORT.md` for the full design rationale, including bugs found and fixed along the way,
+and the AI's scoring formulas.
 
 ## Tech Stack
 
@@ -105,6 +120,16 @@ See `PROJECT_REPORT.md` for the full design rationale, including bugs found and 
 - Google Fonts (Orbitron / Share Tech Mono / Rajdhani) via CDN `<link>` — the only external resource the game itself loads
 - Node.js (built-ins only) to run the engine/AI test suites
 - [Playwright](https://playwright.dev/) (dev-only) to run the browser e2e suite; GitHub Actions runs everything on every push
+
+## Authors
+
+| Name | ID | Email |
+|---|---|---|
+| Md. Tahmidur Rahman Nafees | 2022454642 | tahmidur.nafees@northsouth.edu |
+| Sakib Rahman Rohan | 2011350042 | rahman.rohan@northsouth.edu |
+
+Department of Electrical and Computer Engineering, North South University.
+Submitted to: Mohammad Shifat-E-Rabbi (rabbi.mohammad@northsouth.edu).
 
 ## License
 

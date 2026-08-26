@@ -8,7 +8,11 @@ npm-debug.log*
 # Playwright
 test-results/
 playwright-report/
-tests/e2e/*.png
+support/tests/e2e/*.png
+
+# Report rendering intermediates (render.js cleans these up itself, but
+# just in case a run is interrupted mid-render)
+support/reports/*.merged.html
 
 # OS files
 .DS_Store

@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chain Reaction: Nexus Protocol — Update Report</title>
+<style>
+/* ieee_style.css inlined below */
+</style>
+</head>
+<body>
+
+<div class="title-block">
+  <div class="paper-title">Chain Reaction: Nexus Protocol —<br>Project Update Report</div>
+  <div class="paper-authors">Md. Tahmidur Rahman Nafees (2022454642) &middot; Sakib Rahman Rohan (2011350042)</div>
+  <div class="paper-affiliation">tahmidur.nafees@northsouth.edu &middot; rahman.rohan@northsouth.edu</div>
+  <div class="paper-affiliation">Department of Electrical and Computer Engineering, North South University</div>
+  <div class="paper-affiliation">Submitted to: Mohammad Shifat-E-Rabbi &lt;rabbi.mohammad@northsouth.edu&gt;</div>
+  <div class="paper-meta">Update Report &middot; Status as of June 13, 2026 &middot; Repository: github.com/tahmidnafees619/ChainReaction</div>
+</div>
+
+<div class="abstract-block">
+  <span class="label">Abstract—</span>This update report describes the state of the
+  <em>Chain Reaction: Nexus Protocol</em> project at its first development milestone: a working,
+  playable implementation of the core game rules, a rule-based computer opponent, and a themed
+  browser frontend with basic audio. We summarize the architecture chosen, the rules implemented,
+  the initial (single-strategy) AI, and a preliminary unit test suite, and outline the specific
+  weaknesses identified at this stage — a computer opponent with no difficulty options, no
+  browser-level verification, and no formalized robustness guarantees — that motivated the
+  substantially expanded system described in the final report.</div>
+<div class="keywords"><span class="label">Index Terms—</span>project status, game implementation,
+milestone report</div>
+
+<div class="columns">
+
+<h2 class="section">I. Progress Summary</h2>
+
+<p>At this milestone, the project consists of a working, playable build of the core game: a
+headless rules engine (<span class="mono">ChainReactionEngine.js</span>), a first-pass computer
+opponent, and a themed HTML5 Canvas frontend ("Nexus Protocol"), plus an initial hand-rolled unit
+test suite for the engine. The system already satisfies the project's foundational architectural
+goal — a strict separation between game rules and rendering, communicated only through an explicit
+event interface, shown in Fig. 1 — which every later addition has continued to respect. This
+separation was a deliberate up-front decision rather than an incidental one: it is what makes it
+possible for the engine's rule correctness to be unit-tested under plain Node.js, with no browser
+and no rendering technology involved at all, and it is what will let the frontend and the AI evolve
+independently of one another in later milestones.</p>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 130" width="100%" style="max-width:270px">
+  <defs>
+    <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#000"/>
+    </marker>
+  </defs>
+  <rect x="20" y="8" width="120" height="46" fill="#fff" stroke="#000" stroke-width="1.1"/>
+  <text x="80" y="28" text-anchor="middle" font-family="Times New Roman,serif" font-size="9.5" font-weight="bold">Frontend</text>
+  <text x="80" y="41" text-anchor="middle" font-family="Times New Roman,serif" font-size="7.2">Canvas render, audio,</text>
+  <text x="80" y="50" text-anchor="middle" font-family="Times New Roman,serif" font-size="7.2">menu / game screens</text>
+
+  <line x1="140" y1="24" x2="178" y2="24" stroke="#000" stroke-width="1" marker-end="url(#arrow2)"/>
+  <text x="159" y="18" text-anchor="middle" font-family="Times New Roman,serif" font-size="6.4">click</text>
+  <line x1="178" y1="40" x2="140" y2="40" stroke="#000" stroke-width="1" marker-end="url(#arrow2)"/>
+  <text x="159" y="52" text-anchor="middle" font-family="Times New Roman,serif" font-size="6.4">events</text>
+
+  <rect x="180" y="8" width="100" height="46" fill="#fff" stroke="#000" stroke-width="1.1"/>
+  <text x="230" y="28" text-anchor="middle" font-family="Times New Roman,serif" font-size="9.5" font-weight="bold">Engine</text>
+  <text x="230" y="41" text-anchor="middle" font-family="Times New Roman,serif" font-size="7.2">rules, state,</text>
+  <text x="230" y="50" text-anchor="middle" font-family="Times New Roman,serif" font-size="7.2">event bus</text>
+
+  <line x1="230" y1="54" x2="230" y2="86" stroke="#000" stroke-width="1" marker-end="url(#arrow2)"/>
+  <text x="238" y="72" font-family="Times New Roman,serif" font-size="6.4">turn_change</text>
+
+  <rect x="180" y="88" width="100" height="34" fill="#fff" stroke="#000" stroke-width="1.1"/>
+  <text x="230" y="106" text-anchor="middle" font-family="Times New Roman,serif" font-size="9.5" font-weight="bold">AI (v1)</text>
+  <text x="230" y="116" text-anchor="middle" font-family="Times New Roman,serif" font-size="7.2">ordered rule list</text>
+</svg>
+<figcaption><span class="fig-label">Fig. 1.</span> Architecture at this milestone. The frontend and the version-1 rule-based AI are both consumers of the engine's public event interface; neither has any privileged access to engine internals.</figcaption>
+</figure>
+
+<h3 class="subsection">A. Rules Engine</h3>
+<p>The engine implements the full ruleset targeted for this project: a configurable
+<span class="eq-inline">R&times;C</span> grid (2–10 players), position-dependent critical mass
+(corner/edge/interior cells hold 2/3/4 orbs respectively), wave-based simultaneous cascade
+resolution on explosion, a first-round-gated elimination rule, and win detection. It exposes state
+exclusively through a documented event system (<span class="mono">state_change</span>,
+<span class="mono">explosion</span>, <span class="mono">turn_change</span>,
+<span class="mono">player_eliminated</span>, <span class="mono">game_over</span>,
+<span class="mono">error</span>) and a single mutating entry point,
+<span class="mono">handlePlayerClick(row, col)</span>, with no dependency on the DOM. An initial
+suite of hand-rolled assertions (run under plain Node.js, no test framework) verifies construction
+validation, capacity computation, single and multi-cell explosions, turn rotation, the elimination
+guard, and a full small-board game played to a win. Table I summarizes coverage at this stage;
+all listed assertions pass at time of writing.</p>
+
+<figure class="full-width">
+<table class="report-table">
+<caption><span class="table-label">Table I</span><br>Test Coverage at This Milestone</caption>
+<thead><tr><th style="text-align:left">Area</th><th style="text-align:left">Covered</th><th>Environment</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Config validation</td><td style="text-align:left">rows/cols/player-count bounds</td><td>Node.js</td></tr>
+<tr><td style="text-align:left">Capacity rule</td><td style="text-align:left">corner/edge/interior cases</td><td>Node.js</td></tr>
+<tr><td style="text-align:left">Explosions</td><td style="text-align:left">single-cell and chained</td><td>Node.js</td></tr>
+<tr><td style="text-align:left">Turn / elimination</td><td style="text-align:left">rotation, first-round guard</td><td>Node.js</td></tr>
+<tr><td style="text-align:left">Full game</td><td style="text-align:left">small board, played to a win</td><td>Node.js</td></tr>
+<tr><td style="text-align:left">Frontend / UI</td><td style="text-align:left"><em>not yet covered</em></td><td>&mdash;</td></tr>
+</tbody>
+</table>
+</figure>
+
+<h3 class="subsection">B. Initial AI</h3>
+<p>A first computer opponent (<span class="mono">ChainReactionAI.js</span>) is implemented as a
+short ordered rule list: detonate an already-critical owned cell if one exists, otherwise prefer an
+open corner, otherwise prefer an interior cell, otherwise move at random. It is wired into the
+frontend via the engine's <span class="mono">turn_change</span> event, with a short artificial
+delay before it plays so a bot's move does not feel instantaneous. Any player slot can be toggled
+between human and bot control from the setup menu, and multiple simultaneous bot players are
+supported.</p>
+
+<h3 class="subsection">C. Frontend</h3>
+<p>The frontend renders the board on a 2-D canvas with a cyberpunk visual theme (a glassmorphic
+setup menu, animated grid background, per-player neon color palette) and includes an initial pass
+at procedurally synthesized audio via the Web Audio API — placement and explosion sound effects, an
+ambient menu tone, and a victory arpeggio — with no audio assets shipped or fetched. Player setup
+supports configurable grid dimensions and 2–10 operative slots.</p>
+
+<h2 class="section">II. Known Limitations at This Stage</h2>
+
+<p>Three specific gaps are identified at this milestone as the priorities for the next phase of
+work, listed here because each directly shaped a concrete deliverable in the final report:</p>
+
+<ol class="report-list">
+<li><strong class="term">Single AI strength.</strong> The rule-list opponent has no configurable
+difficulty and no mechanism for evaluating the actual consequence of a candidate move before
+playing it — it reacts to the immediate board rather than simulating outcomes. This is flagged as
+the highest-priority follow-up.</li>
+<li><strong class="term">No browser-level verification.</strong> The test suite at this stage
+exercises only the DOM-free engine; no automated check yet exists for the rendered, interactive
+page itself, meaning defects in layout, event wiring, or UI state are currently only caught by
+manual inspection.</li>
+<li><strong class="term">No formalized robustness bound.</strong> The cascade resolver has no
+explicit termination guarantee for pathological board configurations, and asynchronous UI flows
+(such as a bot's "thinking" delay) have no protection against a user action changing game state
+while that delay is in flight.</li>
+</ol>
+
+<h2 class="section">III. Planned Next Steps</h2>
+
+<p>The next phase of work is planned to address each limitation in Section II directly: replacing
+the rule-list opponent with a heuristic evaluator that simulates each candidate move's actual
+cascade outcome before scoring it, and exposing this as multiple selectable difficulty tiers rather
+than a single fixed strategy; introducing a second, browser-driven test tier to verify real
+interactive behavior rather than engine logic alone; and adding explicit termination and
+state-consistency guarantees to the cascade resolver and the asynchronous bot-turn flow. The final
+report documents the completed versions of all three, including a 300-game empirical evaluation of
+the resulting difficulty tiers and a discussion of three specific defects that the new browser test
+tier was able to catch and the original engine-only tier could not.</p>
+
+<h2 class="section">Acknowledgment</h2>
+<p style="text-indent:0">Portions of this project's code, tests, and documentation were produced
+with the assistance of Anthropic's Claude (Claude Sonnet&nbsp;5), an AI coding assistant, used
+interactively under the authors' direction and review; see reference [3] below and the accompanying
+"Use of AI Tools" note. A complete, expanded reference list appears in the final report.</p>
+
+<div class="references">
+<h2 class="section">References</h2>
+<ol>
+<li>Mozilla Developer Network, "Canvas API," MDN Web Docs. [Online]. Available: https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API</li>
+<li>Mozilla Developer Network, "Web Audio API," MDN Web Docs. [Online]. Available: https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API</li>
+<li>Anthropic, "Claude Sonnet 5" [Large language model], used as an AI coding assistant for implementation, testing, and documentation. [Online]. Available: https://www.anthropic.com/claude</li>
+</ol>
+</div>
+
+</div><!-- /.columns -->
+
+</body>
+</html>
