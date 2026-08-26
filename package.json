@@ -1,0 +1,30 @@
+{
+  "name": "chain-reaction-nexus-protocol",
+  "version": "1.0.0",
+  "description": "Chain Reaction — a browser-based, pass-and-play multiplayer strategy game (2-10 players, human or AI) with a headless vanilla-JS engine and a cyberpunk canvas frontend. Zero runtime dependencies.",
+  "private": true,
+  "license": "MIT",
+  "author": "tahmidnafees619",
+  "main": "src/ChainReactionEngine.js",
+  "scripts": {
+    "test": "npm run test:engine && npm run test:ai",
+    "test:engine": "node tests/ChainReactionEngine.test.js",
+    "test:ai": "node tests/ChainReactionAI.test.js",
+    "test:e2e": "node tests/e2e/game.e2e.test.js",
+    "test:all": "npm run test:engine && npm run test:ai && npm run test:e2e"
+  },
+  "keywords": [
+    "chain-reaction",
+    "board-game",
+    "canvas",
+    "game-ai",
+    "vanilla-js",
+    "no-dependencies"
+  ],
+  "engines": {
+    "node": ">=14"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1"
+  }
+}

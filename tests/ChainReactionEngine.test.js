@@ -1,13 +1,13 @@
 /**
  * CHAIN REACTION ENGINE — TEST SUITE
- * Run with:  node ChainReactionEngine.test.js
+ * Run with:  node tests/ChainReactionEngine.test.js  (or: npm test)
  *
  * Uses only Node.js built-ins. No test framework required.
  */
 
 'use strict';
 
-const { ChainReactionGame, EMPTY } = require('./ChainReactionEngine');
+const { ChainReactionGame, EMPTY } = require('../src/ChainReactionEngine');
 
 // ─────────────────────────────────────────────
 //  Async test queue — must be declared first
@@ -498,6 +498,73 @@ section('Neighbour Calculation');
   assert(!coords.includes('3,3'), 'diagonal (3,3) NOT a neighbour of (2,2)');
   assert(!coords.includes('1,3'), 'diagonal (1,3) NOT a neighbour of (2,2)');
   assert(!coords.includes('3,1'), 'diagonal (3,1) NOT a neighbour of (2,2)');
+}
+
+// ─────────────────────────────────────────────
+//  TEST 15 — Cascade Safety Cap
+// ─────────────────────────────────────────────
+section('Cascade Safety Cap');
+
+{
+  // maxCascadeWaves: 1 → the engine is allowed to fully process exactly
+  // one wave of explosions, then must bail out instead of looping forever.
+  const game = new ChainReactionGame({ rows: 3, cols: 3, totalPlayers: 2, maxCascadeWaves: 1 });
+
+  // Saturate every single cell to its own critical mass, owned by P0.
+  // Exploding all 9 simultaneously guarantees neighbours receive fresh
+  // orbs and are themselves critical again afterward — i.e. this cascade
+  // would keep going for further waves if left unbounded.
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      const cell = game.getCell(r, c);
+      cell.owner = 0;
+      cell.orbCount = cell.capacity;
+    }
+  }
+
+  await_test(async () => {
+    const explosionEvents = [];
+    const cappedEvents = [];
+    const unsubExplosion = game.on('explosion', e => explosionEvents.push(e));
+    const unsubCapped = game.on('cascade_capped', e => cappedEvents.push(e));
+
+    // Calling this directly (rather than via handlePlayerClick) exercises
+    // the cascade loop in isolation, the same way test 14 reaches into
+    // engine internals directly.
+    await game._processExplosions();
+
+    unsubExplosion(); unsubCapped();
+
+    assert(explosionEvents.length > 0, 'wave 1 still explodes before the cap kicks in');
+    assertEqual(cappedEvents.length, 1, 'cascade_capped fired exactly once');
+    if (cappedEvents.length) {
+      assertEqual(cappedEvents[0].waves, 1, 'cascade_capped reports 1 wave processed');
+    }
+
+    // The call must have resolved (we're past the await) and state must
+    // still be coherent — not "hung" and not corrupted.
+    const snap = game.getSnapshot();
+    assert(Array.isArray(snap.grid), 'grid still valid after a capped cascade');
+  }, 'unbounded cascades are capped instead of looping forever');
+}
+
+// ─────────────────────────────────────────────
+//  TEST 16 — Public isProcessing / isGameOver getters
+// ─────────────────────────────────────────────
+section('Public isProcessing / isGameOver Getters');
+
+{
+  const game = new ChainReactionGame({ rows: 5, cols: 5, totalPlayers: 2 });
+
+  assertEqual(game.isProcessing, game._isProcessing, 'isProcessing mirrors internal flag at start');
+  assertEqual(game.isGameOver, game._gameOver, 'isGameOver mirrors internal flag at start');
+  assert(game.isProcessing === false, 'isProcessing false before any move');
+  assert(game.isGameOver === false, 'isGameOver false before any move');
+
+  // Getters must read live state, not a cached copy.
+  game._gameOver = true;
+  assert(game.isGameOver === true, 'isGameOver reflects a live change to internal state');
+  game._gameOver = false; // restore
 }
 
 // ─────────────────────────────────────────────

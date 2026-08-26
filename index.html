@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -258,62 +259,104 @@ html,body{
   letter-spacing:1px;
 }
 
-.token-row{
-  display:flex;flex-wrap:wrap;gap:10px;align-items:center;
-  min-height:56px;
+.operatives-list{
+  display:flex;flex-direction:column;gap:8px;
 }
 
-.player-token{
-  position:relative;
-  width:44px;height:44px;
-  border-radius:50%;
+/* ── Operative row card ───────────────────── */
+.op-row{
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:10px;
+  padding:10px 10px 11px;
+  display:flex;flex-direction:column;gap:9px;
+  transition:border-color .2s,background .2s;
+}
+.op-row:has(.seg-btn[data-role="bot"].active){
+  border-color:var(--pcolor,var(--cyan-dim));
+  background:color-mix(in srgb, var(--pcolor, var(--cyan)) 6%, rgba(255,255,255,.03));
+}
+.op-row-top{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.op-id{
+  display:flex;align-items:center;gap:9px;
+  min-width:0;
+}
+.op-dot{
+  width:11px;height:11px;border-radius:50%;flex-shrink:0;
+  background:var(--pcolor,#00dcff);
+  box-shadow:0 0 8px var(--pcolor,#00dcff);
+}
+.op-name{
+  font-family:var(--font-display);
+  font-size:13px;font-weight:700;letter-spacing:1px;
+  color:#e8edfb;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* Remove — always visible, always tappable (no hover-only, no pointer-events:none) */
+.op-remove{
+  flex-shrink:0;
+  width:30px;height:30px;border-radius:50%;
+  background:rgba(255,26,60,.12);
+  border:1px solid rgba(255,26,60,.4);
+  color:#ff8a97;font-size:13px;
   cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--font-display);font-size:12px;font-weight:700;
-  transition:transform .2s cubic-bezier(.2,.8,.3,1),
-             box-shadow .2s ease;
-  user-select:none;
+  transition:background .2s,border-color .2s,transform .15s;
 }
-.player-token::before{
-  content:'';
-  position:absolute;inset:-3px;
-  border-radius:50%;
-  border:1.5px solid currentColor;
-  opacity:.5;
-  transition:opacity .2s;
-}
-.player-token:hover{
-  transform:scale(1.12);
-}
-.player-token:hover::before{opacity:1;}
-.player-token .token-x{
-  position:absolute;top:-2px;right:-2px;
-  width:16px;height:16px;
-  background:rgba(255,26,60,.9);
-  border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:9px;color:#fff;
-  opacity:0;
-  transition:opacity .15s;
-  pointer-events:none;
-}
-.player-token:hover .token-x{opacity:1;}
+.op-remove:hover{background:rgba(255,26,60,.28);border-color:#ff1a3c;color:#fff;}
+.op-remove:active{transform:scale(.92);}
 
-.add-token-btn{
-  width:44px;height:44px;border-radius:50%;
+/* ── Segmented button groups (controller + difficulty) ── */
+.op-controls{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+}
+.seg-group{
+  display:inline-flex;gap:2px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:8px;padding:2px;
+}
+.seg-group.diff-group{
+  border-color:var(--pcolor,rgba(255,255,255,.1));
+}
+.seg-group.is-hidden{display:none;}
+.seg-btn{
+  border:none;background:transparent;
+  color:rgba(200,210,240,.55);
+  font-family:var(--font-mono);font-size:10.5px;letter-spacing:1px;
+  padding:7px 11px;border-radius:6px;
+  cursor:pointer;white-space:nowrap;
+  transition:background .15s,color .15s,box-shadow .15s;
+}
+.seg-btn:hover{color:#fff;background:rgba(255,255,255,.06);}
+.seg-btn.active{
+  background:rgba(255,255,255,.13);
+  color:#fff;
+  box-shadow:inset 0 0 0 1px var(--pcolor,var(--cyan));
+}
+.seg-btn.active:hover{background:rgba(255,255,255,.18);}
+
+.add-operative-btn{
+  width:100%;margin-top:2px;
+  padding:12px;
   border:1.5px dashed rgba(0,220,255,.4);
   background:rgba(0,220,255,.05);
-  color:var(--cyan);font-size:22px;
+  color:var(--cyan);
+  border-radius:10px;
   cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  transition:background .2s,border-color .2s,transform .2s;
+  font-family:var(--font-mono);font-size:11px;letter-spacing:2px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:background .2s,border-color .2s;
 }
-.add-token-btn:hover{
+.add-operative-btn:hover{
   background:rgba(0,220,255,.12);
   border-color:var(--cyan);
-  transform:scale(1.08);
 }
-.add-token-btn:disabled{opacity:.25;cursor:not-allowed;transform:none;}
+.add-operative-btn:disabled{opacity:.3;cursor:not-allowed;}
+.add-operative-plus{font-size:16px;line-height:1;}
 
 /* ── Start Button ─────────────────────────── */
 .start-btn{
@@ -636,6 +679,105 @@ html,body{
 }
 
 /* ════════════════════════════════════════════
+   ░░ CORNER CONTROLS (mute) ░░
+   ════════════════════════════════════════════ */
+.corner-btn{
+  position:fixed;top:14px;right:14px;
+  z-index:var(--z-toast);
+  width:38px;height:38px;
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  border-radius:50%;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  color:var(--cyan);
+  font-size:16px;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s,border-color .2s,transform .2s;
+}
+.corner-btn:hover{
+  background:rgba(0,220,255,.12);
+  border-color:var(--cyan);
+  transform:scale(1.08);
+}
+.corner-btn.is-muted{color:rgba(200,210,240,.4);}
+
+/* ── How-to-Play trigger + panel ─────────── */
+.howto-trigger{
+  display:block;margin:14px auto 0;
+  padding:8px 18px;
+  background:rgba(0,220,255,.06);
+  border:1px solid var(--cyan-dim);
+  border-radius:20px;
+  color:var(--cyan);
+  font-family:var(--font-mono);
+  font-size:11px;letter-spacing:2px;
+  cursor:pointer;
+  transition:background .2s,border-color .2s;
+}
+.howto-trigger:hover{
+  background:rgba(0,220,255,.14);
+  border-color:var(--cyan);
+}
+
+#howto-overlay{
+  position:fixed;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  z-index:var(--z-modal);
+  padding:24px 16px;
+  background:rgba(6,7,13,.88);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  transition:opacity .35s,transform .35s;
+}
+#howto-overlay.hidden{
+  opacity:0;pointer-events:none;transform:scale(1.03);
+}
+.howto-panel{
+  position:relative;
+  max-width:520px;width:100%;
+  max-height:80vh;overflow-y:auto;
+}
+.howto-close{
+  position:absolute;top:16px;right:16px;
+  z-index:2;
+  width:28px;height:28px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:50%;
+  color:rgba(200,210,240,.7);
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;
+  transition:background .2s,color .2s;
+}
+.howto-close:hover{background:rgba(255,26,60,.2);color:#fff;}
+.howto-title{
+  font-family:var(--font-display);
+  font-size:clamp(1.2rem,4vw,1.6rem);
+  font-weight:700;letter-spacing:1px;
+  color:var(--cyan);
+  margin-bottom:18px;
+  text-shadow:0 0 16px var(--cyan-dim);
+}
+.howto-list{
+  list-style:none;
+  display:flex;flex-direction:column;gap:14px;
+}
+.howto-list li{
+  font-family:var(--font-body);
+  font-size:14px;line-height:1.5;
+  color:rgba(210,218,245,.85);
+  padding-left:16px;
+  border-left:2px solid var(--cyan-dim);
+}
+.howto-list strong{
+  color:var(--cyan);
+  font-weight:600;
+}
+
+/* ════════════════════════════════════════════
    TOAST NOTIFICATIONS
    ════════════════════════════════════════════ */
 #toast-container{
@@ -684,6 +826,9 @@ html,body{
 <!-- ═══════ TOAST ═══════ -->
 <div id="toast-container"></div>
 
+<!-- ═══════ MUTE (persistent across menu + game) ═══════ -->
+<button id="btn-mute" class="corner-btn" title="Mute audio">🔊</button>
+
 <!-- ════════════════════════════════════════
      MENU SCREEN
      ════════════════════════════════════════ -->
@@ -697,6 +842,7 @@ html,body{
         Chain Reaction
         <span>tactical arena</span>
       </div>
+      <button id="btn-howto" class="howto-trigger">❓ How to Play</button>
     </div>
 
     <!-- Grid Config Panel -->
@@ -727,10 +873,13 @@ html,body{
         <div id="player-count-badge" class="players-count-badge">2 / 10</div>
       </div>
 
-      <div id="token-row" class="token-row">
-        <!-- Tokens injected by JS -->
-        <button id="add-player-btn" class="add-token-btn" title="Add player">+</button>
+      <div id="operatives-list" class="operatives-list">
+        <!-- Operative rows injected by JS -->
       </div>
+
+      <button id="add-player-btn" class="add-operative-btn" title="Add operative">
+        <span class="add-operative-plus">+</span> Add Operative
+      </button>
     </div>
 
     <!-- Start Button -->
@@ -777,6 +926,29 @@ html,body{
 </div>
 
 <!-- ════════════════════════════════════════
+     HOW TO PLAY OVERLAY
+     ════════════════════════════════════════ -->
+<div id="howto-overlay" class="hidden">
+  <div class="howto-panel glass-panel">
+    <button id="howto-close" class="howto-close" title="Close">✕</button>
+    <div class="panel-label">Field Manual</div>
+    <h2 class="howto-title">How to Play</h2>
+    <ul class="howto-list">
+      <li><strong>Goal —</strong> capture the entire board and eliminate every other operative.</li>
+      <li><strong>Place an orb —</strong> click any empty cell, or a cell you already own.</li>
+      <li><strong>Critical mass —</strong> a cell explodes once its orb count reaches its capacity:
+        corner cells hold&nbsp;2, edge cells hold&nbsp;3, interior cells hold&nbsp;4.</li>
+      <li><strong>Chain reactions —</strong> an exploding cell fires one orb into each orthogonal
+        neighbour (never diagonally), converting those cells to your colour — this can cascade
+        into a much bigger chain automatically.</li>
+      <li><strong>Elimination —</strong> once every player has placed at least one orb, anyone left
+        with zero orbs on the board is knocked out.</li>
+      <li><strong>Victory —</strong> the last operative with orbs still on the board wins.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
      GAME OVER OVERLAY
      ════════════════════════════════════════ -->
 <div id="gameover-overlay" class="hidden">
@@ -792,11 +964,213 @@ html,body{
 </div>
 
 <!-- ═══════ ENGINE SCRIPT ═══════ -->
-<script src="ChainReactionEngine.js"></script>
-<script src="ChainReactionAI.js"></script>
+<script src="src/ChainReactionEngine.js"></script>
+<script src="src/ChainReactionAI.js"></script>
 
 <script>
 'use strict';
+/* ──────────────────────────────────────────
+   DYNAMIC AUDIO SYNTH ENGINE (WEB AUDIO API)
+   ────────────────────────────────────────── */
+const SoundFX = {
+  ctx: null,
+  masterGain: null,
+  // Restored before the AudioContext exists — applied to masterGain.gain
+  // as soon as init() creates it.
+  muted: (() => {
+    try { return localStorage.getItem('cr_muted') === '1'; } catch (e) { return false; }
+  })(),
+  menuMusicOsc: null,
+  menuMusicGain: null,
+
+  init() {
+    if (!this.ctx) {
+      // Context initialized on user tap to comply with browser safety rules
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // Every sound routes through this single node so mute is one flag,
+      // not a per-sound check scattered across the file.
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = this.muted ? 0 : 1;
+      this.masterGain.connect(this.ctx.destination);
+    }
+  },
+
+  setMuted(muted) {
+    this.muted = muted;
+    try { localStorage.setItem('cr_muted', muted ? '1' : '0'); } catch (e) { /* ignore */ }
+    if (this.masterGain) this.masterGain.gain.value = muted ? 0 : 1;
+  },
+
+  toggleMute() {
+    this.init();
+    this.setMuted(!this.muted);
+    return this.muted;
+  },
+
+  playClick() {
+    this.init();
+    if (!this.ctx) return;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle'; // Clean digital pop texture
+    osc.frequency.setValueAtTime(523.25, this.ctx.currentTime); // C5 Note
+    osc.frequency.exponentialRampToValueAtTime(1046.50, this.ctx.currentTime + 0.06); // Crisp pitch sweep up
+
+    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.06);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.06);
+  },
+
+  playExplosion() {
+    this.init();
+    if (!this.ctx) return;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth'; // Raw plasma burst wave
+    osc.frequency.setValueAtTime(180, this.ctx.currentTime); // Low baseline heavy tone
+    osc.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + 0.18); // Downward pitch drop
+
+    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.2);
+  },
+
+  startMenuMusic() {
+    this.init();
+    if (!this.ctx || this.menuMusicOsc) return; // Already playing
+
+    this.menuMusicOsc = this.ctx.createOscillator();
+    this.menuMusicGain = this.ctx.createGain();
+
+    this.menuMusicOsc.type = 'triangle'; // Ambient, warm sci-fi hum
+    this.menuMusicOsc.frequency.setValueAtTime(110, this.ctx.currentTime); // Low A2 baseline
+
+    this.menuMusicGain.gain.setValueAtTime(0.05, this.ctx.currentTime); // Very subtle
+
+    this.menuMusicOsc.connect(this.menuMusicGain);
+    this.menuMusicGain.connect(this.masterGain);
+
+    this.menuMusicOsc.start();
+    // Oscillator runs indefinitely until stopMenuMusic() is called
+  },
+
+  stopMenuMusic() {
+    if (!this.menuMusicOsc || !this.ctx) return;
+
+    try {
+      // Fade out over 0.3s for smooth transition
+      this.menuMusicGain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+      this.menuMusicOsc.stop(this.ctx.currentTime + 0.3);
+      this.menuMusicOsc.disconnect();
+      this.menuMusicGain.disconnect();
+    } catch (e) {
+      // Already stopped
+    }
+
+    this.menuMusicOsc = null;
+    this.menuMusicGain = null;
+  },
+
+  playVictory() {
+    this.init();
+    if (!this.ctx) return;
+
+    // Victory arpeggio frequencies: C5, E5, G5, C6 (major chord)
+    const notes = [
+      { freq: 261.63, delay: 0.0 },   // C5
+      { freq: 329.63, delay: 0.15 },  // E5
+      { freq: 392.00, delay: 0.3 },   // G5
+      { freq: 523.25, delay: 0.45 }   // C6
+    ];
+
+    notes.forEach(note => {
+      setTimeout(() => {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine'; // Clean, celebratory tone
+        osc.frequency.setValueAtTime(note.freq, this.ctx.currentTime);
+
+        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.5); // Fade over 0.5s
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.5);
+      }, note.delay * 1000);
+    });
+  },
+
+  playMenuSelect() {
+    this.init();
+    if (!this.ctx) return;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine'; // Clean, soft menu tone
+    osc.frequency.setValueAtTime(800, this.ctx.currentTime); // Higher pitch for selection
+    osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.08); // Slight pitch dip
+
+    gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.08);
+  },
+
+  playMenuRemove() {
+    this.init();
+    if (!this.ctx) return;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, this.ctx.currentTime); // Lower tone for removal
+    osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.12);
+
+    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.12);
+  }
+};
+
+// Ensure audio context is unlocked on first user gesture (mobile/browser autoplay policies)
+// Also start menu music on first interaction with the menu
+document.addEventListener('pointerdown', () => {
+  SoundFX.init();
+  // Start menu music if we're on the menu screen and it hasn't started yet
+  if (!menuMusicStarted && !$menuScreen.classList.contains('hidden')) {
+    menuMusicStarted = true;
+    try { SoundFX.startMenuMusic(); } catch (e) { /* ignore */ }
+  }
+}, { once: true, passive: true });
 /* ════════════════════════════════════════════════════════════════
    CHAIN REACTION — CYBERPUNK FRONTEND
    ════════════════════════════════════════════════════════════════ */
@@ -829,12 +1203,25 @@ let menuState = {
   cols: 6,
   players: [
     { id:0, color:PLAYER_COLORS[0], name:PLAYER_NAMES[0], isBot:false },
-    { id:1, color:PLAYER_COLORS[1], name:PLAYER_NAMES[1], isBot:true },
+    { id:1, color:PLAYER_COLORS[1], name:PLAYER_NAMES[1], isBot:true, difficulty:'medium' },
   ]
 };
 
+/* ──────────────────────────────────────────
+   PLAYER CONTROLLER STATE (Human / Easy / Medium / Hard)
+   ────────────────────────────────────────── */
+function setControllerState(p, state) {
+  if (state === 'human') {
+    p.isBot = false;
+  } else {
+    p.isBot = true;
+    p.difficulty = state;
+  }
+}
+
 let game = null;
 let lastSnapshot = null;
+let menuMusicStarted = false; // Track if menu music has started
 
 /* ──────────────────────────────────────────
    PARTICLE / FX STATE
@@ -859,6 +1246,10 @@ const $gameoverOverlay = document.getElementById('gameover-overlay');
 const $goName        = document.getElementById('go-name');
 const $toastContainer = document.getElementById('toast-container');
 const $playerAuraEl  = document.getElementById('player-aura');
+const $btnMute       = document.getElementById('btn-mute');
+const $btnHowto      = document.getElementById('btn-howto');
+const $howtoOverlay  = document.getElementById('howto-overlay');
+const $howtoClose    = document.getElementById('howto-close');
 
 /* ──────────────────────────────────────────
    BG CANVAS — ANIMATED ISOMETRIC GRID
@@ -934,66 +1325,99 @@ function initMenu() {
   rowsSlider.addEventListener('input', () => {
     menuState.rows = +rowsSlider.value;
     rowsVal.textContent = menuState.rows;
+    try { SoundFX.playMenuSelect(); } catch (e) { /* ignore */ }
   });
   colsSlider.addEventListener('input', () => {
     menuState.cols = +colsSlider.value;
     colsVal.textContent = menuState.cols;
+    try { SoundFX.playMenuSelect(); } catch (e) { /* ignore */ }
   });
 
   addBtn.addEventListener('click', () => {
     if (menuState.players.length >= 10) return;
     const id = menuState.players.length;
     menuState.players.push({ id, color:PLAYER_COLORS[id], name:PLAYER_NAMES[id], isBot:false });
+    try { SoundFX.playMenuSelect(); } catch (e) { /* ignore */ }
     renderTokens();
   });
 
-  startBtn.addEventListener('click', startGame);
+  startBtn.addEventListener('click', () => {
+    // Stop menu music before transitioning to game
+    try { SoundFX.stopMenuMusic(); } catch (e) { /* ignore */ }
+    startGame();
+  });
 
   renderTokens();
 }
 
 function renderTokens() {
-  const row    = document.getElementById('token-row');
+  const list   = document.getElementById('operatives-list');
   const addBtn = document.getElementById('add-player-btn');
   const badge  = document.getElementById('player-count-badge');
 
-  // Remove all tokens (keep add-btn)
-  Array.from(row.querySelectorAll('.player-token')).forEach(t => t.remove());
+  list.innerHTML = '';
 
-  // Rebuild
   menuState.players.forEach((p, idx) => {
-    const tok = document.createElement('div');
-    tok.className = 'player-token';
-    tok.style.cssText = `background:${hexToRgba(p.color,.18)};
-      color:${p.color};
-      box-shadow: 0 0 12px ${hexToRgba(p.color,.35)};
-      cursor:pointer;
-      position:relative;`;
-    tok.style.setProperty('current-color', p.color);
-    
-    const typeLabel = p.isBot ? '🤖 BOT' : '👤 HUMAN';
-    tok.innerHTML = `
-      <span style="font-size:10px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px;">
-        <span>${p.name.substring(0,3).toUpperCase()}</span>
-        <span style="font-size:8px;opacity:0.8;">${typeLabel}</span>
-      </span>
-      <span class="token-x">✕</span>`;
-    tok.title = `${p.name} (${typeLabel}) — click to toggle type, X to remove`;
+    const isBot = p.isBot;
+    const diff  = p.difficulty || 'medium';
 
-    // Click to toggle bot/human
-    tok.addEventListener('click', (e) => {
-      if (e.target.closest('.token-x')) return; // Don't toggle if clicking X
-      p.isBot = !p.isBot;
+    const row = document.createElement('div');
+    row.className = 'op-row';
+    row.style.setProperty('--pcolor', p.color);
+    row.innerHTML = `
+      <div class="op-row-top">
+        <div class="op-id">
+          <span class="op-dot"></span>
+          <span class="op-name">${p.name}</span>
+        </div>
+        <button type="button" class="op-remove" title="Remove ${p.name}" aria-label="Remove ${p.name}">✕</button>
+      </div>
+      <div class="op-controls">
+        <div class="seg-group" role="group" aria-label="Controller for ${p.name}">
+          <button type="button" class="seg-btn${!isBot ? ' active' : ''}" data-role="human">👤 Human</button>
+          <button type="button" class="seg-btn${isBot ? ' active' : ''}" data-role="bot">🤖 Bot</button>
+        </div>
+        <div class="seg-group diff-group${isBot ? '' : ' is-hidden'}" role="group" aria-label="Bot difficulty for ${p.name}">
+          <button type="button" class="seg-btn diff-btn${diff === 'easy' ? ' active' : ''}" data-diff="easy">Easy</button>
+          <button type="button" class="seg-btn diff-btn${diff === 'medium' ? ' active' : ''}" data-diff="medium">Med</button>
+          <button type="button" class="seg-btn diff-btn${diff === 'hard' ? ' active' : ''}" data-diff="hard">Hard</button>
+        </div>
+      </div>`;
+
+    // Human / Bot — explicit two-way toggle, not a cycling click.
+    row.querySelector('[data-role="human"]').addEventListener('click', () => {
+      if (!p.isBot) return;
+      try { SoundFX.playMenuSelect(); } catch (e) { /* ignore */ }
+      setControllerState(p, 'human');
+      renderTokens();
+    });
+    row.querySelector('[data-role="bot"]').addEventListener('click', () => {
+      if (p.isBot) return;
+      try { SoundFX.playMenuSelect(); } catch (e) { /* ignore */ }
+      setControllerState(p, p.difficulty || 'medium'); // remembers last difficulty
       renderTokens();
     });
 
-    // X button to remove
-    tok.querySelector('.token-x').addEventListener('click', (e) => {
-      e.stopPropagation();
+    // Difficulty — explicit Easy/Med/Hard buttons, only shown for bots.
+    row.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nextDiff = btn.dataset.diff;
+        if (p.difficulty === nextDiff) return;
+        try { SoundFX.playMenuSelect(); } catch (e) { /* ignore */ }
+        setControllerState(p, nextDiff);
+        renderTokens();
+      });
+    });
+
+    // Remove — always visible, always tappable (previous version relied on
+    // a hover-only icon with pointer-events:none, so it never actually
+    // received clicks — this button has neither restriction).
+    row.querySelector('.op-remove').addEventListener('click', () => {
       if (menuState.players.length <= 2) {
         showToast('Minimum 2 operatives required', 'warn');
         return;
       }
+      try { SoundFX.playMenuRemove(); } catch (e) { /* ignore */ }
       menuState.players.splice(idx, 1);
       // Re-assign ids
       menuState.players.forEach((pp, i) => {
@@ -1003,7 +1427,8 @@ function renderTokens() {
       });
       renderTokens();
     });
-    row.insertBefore(tok, addBtn);
+
+    list.appendChild(row);
   });
 
   addBtn.disabled = menuState.players.length >= 10;
@@ -1058,6 +1483,7 @@ function setupCanvas(rows, cols) {
 function startGame() {
   const { rows, cols, players } = menuState;
   game = new ChainReactionGame({ rows, cols, totalPlayers: players.length });
+  gameSessionId++; // invalidate any bot callback still "thinking" from a previous match
 
   // Clear FX state
   particles.length = 0;
@@ -1067,6 +1493,8 @@ function startGame() {
 
   showScreen('game-screen');
   $gameoverOverlay.classList.add('hidden');
+  dockMuteInHud();
+  $gameCanvas.style.pointerEvents = 'auto'; // guard against a stale bot leaving this disabled
 
   // Small delay to let the DOM layout settle before sizing canvas
   setTimeout(() => {
@@ -1077,6 +1505,10 @@ function startGame() {
     setActivePlayer(game.currentPlayer);
     renderFrame();
     startRenderLoop();
+
+    // If player 0 is bot-controlled, nothing else will ever kick off its
+    // first move — see triggerBotTurnIfNeeded() for why.
+    triggerBotTurnIfNeeded(game.currentPlayer, gameSessionId);
   }, 60);
 }
 
@@ -1145,56 +1577,144 @@ function setActivePlayer(playerId) {
 }
 
 /* ──────────────────────────────────────────
+   BOT TURN TRIGGER
+   ────────────────────────────────────────── */
+/**
+ * Incremented every time a match is (re)started — startGame(), the restart
+ * button, and rematch all bump this. A bot's "thinking" delay spans an
+ * `await`, and in that window the user can bail to the menu (`game`
+ * becomes null) or hit Restart/Rematch (the *same* `game` object is reset
+ * in place, so a plain `game !== capturedGame` identity check would miss
+ * it). Capturing this counter and re-checking it after the delay is what
+ * lets a stale callback recognize "the match I was thinking for is gone"
+ * in both cases, instead of throwing on a null `game` or — worse —
+ * silently playing a move into whatever match replaced it.
+ */
+let gameSessionId = 0;
+
+/**
+ * Plays a bot's turn if `currentPlayer` is bot-controlled.
+ *
+ * This is called both from the `turn_change` handler (for every turn
+ * after the first) AND explicitly once right after a game starts. The
+ * engine only emits `turn_change` when the active player *changes* —
+ * the very first turn (player 0, right after construction) is never a
+ * "change" from anything, so nothing would ever trigger player 0's move
+ * if that slot were a bot without this explicit kickoff.
+ */
+async function triggerBotTurnIfNeeded(currentPlayer, sessionId) {
+  const currentPlayerConfig = menuState.players[currentPlayer];
+  if (!game || !currentPlayerConfig || !currentPlayerConfig.isBot || game.isGameOver) return;
+
+  // Block human inputs on the canvas while AI thinks
+  $gameCanvas.style.pointerEvents = 'none';
+
+  // Add a slight 600ms artificial delay so the bot feels natural, not instant
+  await new Promise(resolve => setTimeout(resolve, 600));
+
+  // The match may have been left, restarted, or replaced while "thinking" —
+  // bail out rather than crash on a null game or act on a stale one.
+  if (!game || sessionId !== gameSessionId || game.isGameOver) return;
+
+  // Get the optimal coordinates from our heuristic script
+  const botMove = ChainReactionAI.getBestMove(game, currentPlayer, currentPlayerConfig.difficulty);
+
+  if (botMove) {
+    // Execute the automated click into the core engine — awaited so
+    // pointer events aren't restored until the bot's cascade (and any
+    // resulting turn_change for the *next* bot) has actually settled.
+    await game.handlePlayerClick(botMove.row, botMove.col);
+  }
+
+  // Restore human touchscreen inputs once AI turn finishes — but only for
+  // the match that's still actually current; a stale callback must not
+  // reach across into whatever match replaced it.
+  if (game && sessionId === gameSessionId) {
+    $gameCanvas.style.pointerEvents = 'auto';
+  }
+}
+
+/* ──────────────────────────────────────────
    GAME EVENT BINDINGS
    ────────────────────────────────────────── */
+/**
+ * Unsubscribe handles for every listener `bindGameEvents()` registers on
+ * the current `game` instance. `game.on()` returns an unsubscribe
+ * function specifically so a consumer can detach cleanly — without
+ * calling these when a match is abandoned, an orphaned engine instance
+ * left mid-cascade (e.g. the user hits "Menu" while a chain reaction is
+ * still animating) would keep emitting `state_change`/`turn_change`/etc.
+ * into this same shared frontend state (`lastSnapshot`, the player strip,
+ * a *new* match's bot-turn logic...) indefinitely.
+ */
+let gameEventUnsubscribers = [];
+
+function unbindGameEvents() {
+  gameEventUnsubscribers.forEach(unsub => unsub());
+  gameEventUnsubscribers = [];
+}
+
 function bindGameEvents() {
-  game.on('state_change', snapshot => {
-    lastSnapshot = snapshot;
-    updatePlayerStrip(snapshot);
-  });
+  unbindGameEvents(); // guard against ever double-binding onto leftover listeners
 
-  game.on('turn_change', async ({ currentPlayer }) => {
-    setActivePlayer(currentPlayer);
+  gameEventUnsubscribers.push(
+    game.on('state_change', snapshot => {
+      lastSnapshot = snapshot;
+      updatePlayerStrip(snapshot);
 
-    // ═══ AI LOGIC — Handle Multiple Bot Players ═══
-    // Check if the current player is a bot
-    const currentPlayerConfig = menuState.players[currentPlayer];
-    if (currentPlayerConfig && currentPlayerConfig.isBot && !game._gameOver) {
-      // Block human inputs on the canvas while AI thinks
-      $gameCanvas.style.pointerEvents = 'none';
-      
-      // Add a slight 600ms artificial delay so the bot feels natural, not instant
-      await new Promise(resolve => setTimeout(resolve, 600));
+      // Play the crisp tech-click every time an orb settles safely
+      if (!snapshot.gameOver) {
+        try { SoundFX.playClick(); } catch (e) { /* ignore audio errors */ }
+      }
+    }),
 
-      // Get the optimal coordinates from our heuristic script
-      const botMove = ChainReactionAI.getBestMove(game, currentPlayer);
-      
-      if (botMove) {
-        // Execute the automated click into the core engine
-        game.handlePlayerClick(botMove.row, botMove.col);
+    game.on('turn_change', async ({ currentPlayer }) => {
+      setActivePlayer(currentPlayer);
+
+      // The engine's last `state_change` snapshot still has `currentPlayer`
+      // set to whoever just moved — `_advanceTurn()` emits `turn_change`
+      // without a fresh snapshot. Patch it in immediately so the player
+      // strip's active-player highlight doesn't lag one move behind.
+      if (lastSnapshot) {
+        lastSnapshot = { ...lastSnapshot, currentPlayer };
+        updatePlayerStrip(lastSnapshot);
       }
 
-      // Restore human touchscreen inputs once AI turn finishes
-      $gameCanvas.style.pointerEvents = 'auto';
-    }
-  });
+      await triggerBotTurnIfNeeded(currentPlayer, gameSessionId);
+    }),
 
-  game.on('explosion', ({ row, col, player }) => {
-    spawnExplosionFX(row, col, player);
-  });
+    game.on('explosion', ({ row, col, player }) => {
+      spawnExplosionFX(row, col, player);
 
-  game.on('player_eliminated', ({ playerId }) => {
-    const p = menuState.players[playerId];
-    showToast(`${p?.name || `P${playerId}`} eliminated`, 'elim');
-  });
+      // 1. Play the synthesized heavy explosion bass drop
+      try { SoundFX.playExplosion(); } catch (e) { /* ignore audio errors */ }
 
-  game.on('game_over', ({ winner }) => {
-    setTimeout(() => showGameOver(winner), 400);
-  });
+      // 2. Trigger physical mobile hardware vibration rumble (40ms pulse)
+      if (navigator.vibrate) {
+        try { navigator.vibrate(40); } catch (e) { /* ignore vibration errors */ }
+      }
+    }),
 
-  game.on('error', ({ message }) => {
-    showToast(message, 'error');
-  });
+    game.on('player_eliminated', ({ playerId }) => {
+      const p = menuState.players[playerId];
+      showToast(`${p?.name || `P${playerId}`} eliminated`, 'elim');
+    }),
+
+    game.on('game_over', ({ winner }) => {
+      // Play celebratory victory arpeggio
+      try { SoundFX.playVictory(); } catch (e) { /* ignore audio errors */ }
+
+      setTimeout(() => showGameOver(winner), 400);
+    }),
+
+    game.on('error', ({ message }) => {
+      showToast(message, 'error');
+    }),
+
+    game.on('cascade_capped', () => {
+      showToast('Cascade paused — resolving further next move', 'warn');
+    }),
+  );
 }
 
 /* ──────────────────────────────────────────
@@ -1210,7 +1730,7 @@ function onCanvasClick(e) {
   if (!game || !lastSnapshot) return;
   // Read live engine state — never the stale snapshot — so the
   // isProcessing flag is always current after a cascade settles.
-  if (game._isProcessing || game._gameOver) return;
+  if (game.isProcessing || game.isGameOver) return;
 
   const rect = $gameCanvas.getBoundingClientRect();
   const px = (e.clientX - rect.left);
@@ -1575,8 +2095,11 @@ document.getElementById('btn-restart').addEventListener('click', () => {
   Object.keys(orbAnimations).forEach(k => delete orbAnimations[k]);
   $gameoverOverlay.classList.add('hidden');
   game.restart();
+  gameSessionId++; // invalidate any bot callback still "thinking" from before the restart
+  $gameCanvas.style.pointerEvents = 'auto'; // guard against a stale bot leaving this disabled
   lastSnapshot = game.getSnapshot();
   setActivePlayer(game.currentPlayer);
+  triggerBotTurnIfNeeded(game.currentPlayer, gameSessionId); // in case player 0 is bot-controlled
 });
 
 document.getElementById('btn-menu').addEventListener('click', () => {
@@ -1584,6 +2107,8 @@ document.getElementById('btn-menu').addEventListener('click', () => {
   showScreen('menu-screen');
   $playerAuraEl.style.opacity = '0';
   $gameoverOverlay.classList.add('hidden');
+  floatMuteInCorner();
+  unbindGameEvents(); // stop an abandoned match (possibly still mid-cascade) from touching frontend state
   game = null;
   lastSnapshot = null;
 });
@@ -1608,9 +2133,12 @@ document.getElementById('go-rematch').addEventListener('click', () => {
   Object.keys(orbAnimations).forEach(k => delete orbAnimations[k]);
   $gameoverOverlay.classList.add('hidden');
   game.restart();
+  gameSessionId++; // invalidate any bot callback still "thinking" from before the rematch
+  $gameCanvas.style.pointerEvents = 'auto'; // guard against a stale bot leaving this disabled
   lastSnapshot = game.getSnapshot();
   setActivePlayer(game.currentPlayer);
   updatePlayerStrip(lastSnapshot);
+  triggerBotTurnIfNeeded(game.currentPlayer, gameSessionId); // in case player 0 is bot-controlled
 });
 
 document.getElementById('go-menu').addEventListener('click', () => {
@@ -1618,6 +2146,8 @@ document.getElementById('go-menu').addEventListener('click', () => {
   showScreen('menu-screen');
   $playerAuraEl.style.opacity = '0';
   $gameoverOverlay.classList.add('hidden');
+  floatMuteInCorner();
+  unbindGameEvents(); // stop an abandoned match (possibly still mid-cascade) from touching frontend state
   game = null;
   lastSnapshot = null;
 });
@@ -1658,11 +2188,62 @@ function hexToRgba(hex, alpha = 1) {
 }
 
 /* ──────────────────────────────────────────
+   MUTE CONTROL
+   ────────────────────────────────────────── */
+/**
+ * The mute button lives in exactly one DOM node, but needs two different
+ * homes: floating in the corner on the menu screen (nothing else occupies
+ * that spot there), and docked inline in the game HUD's own button row
+ * while in-game — NOT floating fixed in the same corner, because that
+ * corner is where the HUD's own Restart/Menu buttons sit, and a fixed
+ * element there would sit on top of and completely block them.
+ */
+function dockMuteInHud() {
+  const hudActions = document.querySelector('#hud .hud-actions');
+  if (!hudActions || $btnMute.parentElement === hudActions) return;
+  $btnMute.classList.remove('corner-btn');
+  $btnMute.classList.add('hud-btn');
+  hudActions.insertBefore($btnMute, hudActions.firstChild);
+}
+function floatMuteInCorner() {
+  if ($btnMute.parentElement === document.body) return;
+  $btnMute.classList.remove('hud-btn');
+  $btnMute.classList.add('corner-btn');
+  document.body.appendChild($btnMute);
+}
+
+function refreshMuteIcon() {
+  $btnMute.textContent = SoundFX.muted ? '🔇' : '🔊';
+  $btnMute.classList.toggle('is-muted', SoundFX.muted);
+  $btnMute.title = SoundFX.muted ? 'Unmute audio' : 'Mute audio';
+}
+
+$btnMute.addEventListener('click', () => {
+  SoundFX.toggleMute();
+  refreshMuteIcon();
+});
+
+/* ──────────────────────────────────────────
+   HOW-TO-PLAY PANEL
+   ────────────────────────────────────────── */
+$btnHowto.addEventListener('click', () => {
+  try { SoundFX.playMenuSelect(); } catch (e) { /* ignore */ }
+  $howtoOverlay.classList.remove('hidden');
+});
+$howtoClose.addEventListener('click', () => {
+  $howtoOverlay.classList.add('hidden');
+});
+$howtoOverlay.addEventListener('click', (e) => {
+  if (e.target === $howtoOverlay) $howtoOverlay.classList.add('hidden');
+});
+
+/* ──────────────────────────────────────────
    BOOT
    ────────────────────────────────────────── */
 resizeBgCanvas();
 drawBg();
 initMenu();
+refreshMuteIcon();
 
 </script>
 </body>
